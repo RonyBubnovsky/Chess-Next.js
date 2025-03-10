@@ -114,19 +114,29 @@ export default function Home() {
 
           {isSignedIn ? (
             <Link href="/chess">
-              <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md hover:bg-gray-200 transition shadow-sm">
+              {/* Button with hover zoom & pointer cursor */}
+              <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                                 transition shadow-sm transform 
+                                 hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                                 cursor-pointer">
                 Play Chess
               </button>
             </Link>
           ) : (
             <div className="space-x-4">
               <Link href="/sign-in">
-                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md hover:bg-gray-200 transition shadow-sm">
+                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                                   transition shadow-sm transform 
+                                   hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                                   cursor-pointer">
                   Sign In
                 </button>
               </Link>
               <Link href="/sign-up">
-                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md hover:bg-gray-200 transition shadow-sm">
+                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                                   transition shadow-sm transform 
+                                   hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                                   cursor-pointer">
                   Sign Up
                 </button>
               </Link>
