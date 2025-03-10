@@ -2,11 +2,15 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { useUser } from '@clerk/nextjs';
+import { useUser, useAuth } from '@clerk/nextjs'; // import useAuth
 import ThreeDScene from '../components/ThreeDScene';
 
 export default function Home() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
+  const { signOut } = useAuth(); // destructure signOut
+
+  // Display name logic
+  const displayName = user?.firstName || user?.username || 'Friend';
 
   return (
     <main className="relative min-h-screen flex overflow-hidden">
@@ -104,43 +108,70 @@ export default function Home() {
           </defs>
         </svg>
 
+        {/* The container with sign in/out logic */}
         <div className="relative z-10 max-w-md w-full bg-white/10 backdrop-blur-md rounded-xl shadow-[0_0_30px_-5px_rgba(0,0,0,0.5)] border border-white/10 p-8 text-center">
-          <h1 className="text-4xl font-bold mb-4 text-white tracking-wide">
-            Welcome to Next.js Chess
-          </h1>
-          <p className="text-gray-200 text-lg mb-8">
-            A modern chess experience with Clerk authentication.
-          </p>
-
           {isSignedIn ? (
-            <Link href="/chess">
-              {/* Button with hover zoom & pointer cursor */}
-              <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
-                                 transition shadow-sm transform 
-                                 hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
-                                 cursor-pointer">
-                Play Chess
-              </button>
-            </Link>
+            <>
+              <h1 className="text-4xl font-bold mb-4 text-white tracking-wide">
+                Welcome back, {displayName}!
+              </h1>
+              <p className="text-gray-200 text-lg mb-8">
+                Ready to play chess? Click the button below to start your game.
+              </p>
+              <div className="space-x-4">
+                <Link href="/chess">
+                  <button
+                    className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                               transition shadow-sm transform 
+                               hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                               cursor-pointer"
+                  >
+                    Play Chess
+                  </button>
+                </Link>
+                {/* LOG OUT BUTTON */}
+                <button
+                  onClick={signOut}
+                  className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                             transition shadow-sm transform 
+                             hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                             cursor-pointer"
+                >
+                  Log Out
+                </button>
+              </div>
+            </>
           ) : (
-            <div className="space-x-4">
-              <Link href="/sign-in">
-                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
-                                   transition shadow-sm transform 
-                                   hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
-                                   cursor-pointer">
-                  Sign In
-                </button>
-              </Link>
-              <Link href="/sign-up">
-                <button className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
-                                   transition shadow-sm transform 
-                                   hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
-                                   cursor-pointer">
-                  Sign Up
-                </button>
-              </Link>
-            </div>
+            <>
+              <h1 className="text-4xl font-bold mb-4 text-white tracking-wide">
+                Welcome to Next.js Chess
+              </h1>
+              <p className="text-gray-200 text-lg mb-8">
+                A modern chess experience with Clerk authentication.
+              </p>
+              <div className="space-x-4">
+                <Link href="/sign-in">
+                  <button
+                    className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                               transition shadow-sm transform 
+                               hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                               cursor-pointer"
+                  >
+                    Sign In
+                  </button>
+                </Link>
+                <Link href="/sign-up">
+                  <button
+                    className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
+                               transition shadow-sm transform 
+                               hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 
+                               cursor-pointer"
+                  >
+                    Sign Up
+                  </button>
+                </Link>
+              </div>
+            </>
           )}
         </div>
       </section>
