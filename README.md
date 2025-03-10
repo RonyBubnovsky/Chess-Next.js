@@ -12,7 +12,6 @@ A modern chess application built with **Next.js** and **TypeScript** featuring r
   - [Environment Variables](#environment-variables)
   - [Clerk Setup](#clerk-setup)
   - [Redis Setup](#redis-setup)
-- [Folder Structure](#folder-structure)
 - [Usage](#usage)
 - [License](#license)
 
@@ -43,8 +42,8 @@ A modern chess application built with **Next.js** and **TypeScript** featuring r
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/nextjs-chess-app.git
-cd nextjs-chess-app
+git clone https://github.com/RonyBubnovsky/Chess-Next.js.git
+cd Chess-Next.js
 ```
 
 ### 2. Install Dependencies
