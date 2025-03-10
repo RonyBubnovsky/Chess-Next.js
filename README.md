@@ -12,7 +12,6 @@ A modern chess application built with **Next.js** and **TypeScript** featuring r
   - [Environment Variables](#environment-variables)
   - [Clerk Setup](#clerk-setup)
   - [Redis Setup](#redis-setup)
-- [Folder Structure](#folder-structure)
 - [Usage](#usage)
 - [License](#license)
 
