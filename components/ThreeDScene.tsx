@@ -27,7 +27,7 @@ function RotatingRook() {
   const rookRef = useRef<THREE.Group>(null);
 
   // Load the model from public
-  const { scene } = useGLTF('/chess-rook.glb');
+  const { scene } = useGLTF('/ClassicalRook.glb');
 
   // Rotate the rook continuously
   useFrame((_, delta) => {
@@ -40,8 +40,8 @@ function RotatingRook() {
     <primitive
       ref={rookRef}
       object={scene}
-      scale={15}
-      position={[0, -1, 0]} // move it down a bit so it's centered
+      scale={0.05}
+      position={[0, -0.5, 0]} 
     />
   );
 }
