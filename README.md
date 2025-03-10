@@ -62,7 +62,7 @@ This project uses:
 - typescript
 - redis
 - @clerk/nextjs
-- Tailwind CSS (or your preferred styling framework)
+- Tailwind CSS
 
 ### 3. Create Your Environment Variables
 
