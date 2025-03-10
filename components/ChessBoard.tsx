@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess, Square } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 
@@ -11,7 +11,7 @@ interface ChessBoardProps {
   timeControl: number; // in minutes
 }
 
-// Convert minutes to seconds for the clock
+// Convert minutes to seconds
 function minutesToSeconds(minutes: number) {
   return minutes * 60;
 }
@@ -23,116 +23,179 @@ function formatTime(seconds: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-export default function ChessBoard({ orientation, timeControl }: ChessBoardProps) {
-  const [game] = useState(new Chess());
-  const [fen, setFen] = useState('start');
-  const [gameMessage, setGameMessage] = useState<string | null>(null);
+// Move history type to store FEN and last move details
+interface MoveHistoryItem {
+  fen: string;
+  lastMove: { from: string; to: string } | null;
+}
 
-  // For click-to-move
+export default function ChessBoard({ orientation, timeControl }: ChessBoardProps) {
+  // Create a stable Chess instance
+  const gameRef = useRef(new Chess());
+  const game = gameRef.current;
+
+  // Starting history includes the starting position
+  const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
+    { fen: game.fen(), lastMove: null }
+  ]);
+  // currentPosition: index in moveHistory (0 is start)
+  const [currentPosition, setCurrentPosition] = useState(0);
+  // Separate move counter (0 means no moves yet)
+  const [moveCount, setMoveCount] = useState(0);
+  const [displayFen, setDisplayFen] = useState(game.fen());
+  const [highlightSquares, setHighlightSquares] = useState<{ [square: string]: React.CSSProperties }>({});
+  const [gameMessage, setGameMessage] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
 
-  // userColor vs. AI color
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
-  // Time control in seconds
-  const initialSeconds = minutesToSeconds(timeControl);
-  const [userTime, setUserTime] = useState(initialSeconds);
-  const [aiTime, setAiTime] = useState(initialSeconds);
+  const initialTime = minutesToSeconds(timeControl);
+  const [userTime, setUserTime] = useState(initialTime);
+  const [aiTime, setAiTime] = useState(initialTime);
 
-  // For storing a pending promotion move
-  // e.g. { from: 'e7', to: 'e8', color: 'w' }
   const [pendingPromotion, setPendingPromotion] = useState<{
     from: Square;
     to: Square;
     color: 'w' | 'b';
   } | null>(null);
 
-  // On mount, if user is black => let white (AI) move first
+  // Highlight the last move made on the board
+  const highlightLastMove = useCallback((from: string, to: string) => {
+    setHighlightSquares({
+      [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
+      [to]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
+    });
+  }, []);
+
+  // Navigate one move back in history
+  const handleGoBack = useCallback(() => {
+    if (currentPosition > 0) {
+      const newPosition = currentPosition - 1;
+      setCurrentPosition(newPosition);
+      const historyItem = moveHistory[newPosition];
+      setDisplayFen(historyItem.fen);
+      if (historyItem.lastMove) {
+        highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
+      } else {
+        setHighlightSquares({});
+      }
+      setSelectedSquare(null);
+      setMoveSquares({});
+    }
+  }, [currentPosition, moveHistory, highlightLastMove]);
+
+  // Navigate one move forward in history
+  const handleGoForward = useCallback(() => {
+    if (currentPosition < moveHistory.length - 1) {
+      const newPosition = currentPosition + 1;
+      setCurrentPosition(newPosition);
+      const historyItem = moveHistory[newPosition];
+      setDisplayFen(historyItem.fen);
+      if (historyItem.lastMove) {
+        highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
+      } else {
+        setHighlightSquares({});
+      }
+      setSelectedSquare(null);
+      setMoveSquares({});
+    }
+  }, [currentPosition, moveHistory, highlightLastMove]);
+
+  // Keyboard navigation for move history
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      handleGoBack();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      handleGoForward();
+    }
+  }, [handleGoBack, handleGoForward]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Setup clock and trigger AI move if necessary
   useEffect(() => {
     if (userColor === 'b') {
       makeAIMove();
     }
-
-    // Clock interval
     const clockInterval = setInterval(() => {
-      if (gameMessage) return; // if game over, do nothing
-      if (game.isGameOver()) return;
-
-      // Whose turn is it?
-      const turn = game.turn(); // 'w' or 'b'
-      if (turn === userColor) {
-        setUserTime((prev) => {
-          if (prev <= 0) {
-            setGameMessage('You ran out of time! You lose.');
-            return 0;
-          }
-          return prev - 1;
-        });
-      } else {
-        setAiTime((prev) => {
-          if (prev <= 0) {
-            setGameMessage('AI ran out of time! You win.');
-            return 0;
-          }
-          return prev - 1;
-        });
+      if (gameMessage || game.isGameOver()) return;
+      if (currentPosition === moveHistory.length - 1) {
+        const turn = game.turn();
+        if (turn === userColor) {
+          setUserTime(prev => {
+            if (prev <= 0) {
+              setGameMessage('You ran out of time! You lose.');
+              return 0;
+            }
+            return prev - 1;
+          });
+        } else {
+          setAiTime(prev => {
+            if (prev <= 0) {
+              setGameMessage('AI ran out of time! You win.');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
       }
     }, 1000);
-
     return () => clearInterval(clockInterval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [gameMessage, currentPosition, moveHistory.length, userColor]);
 
-  // Make a user move
+  // Whether we're at the live (latest) position
+  const isAtLivePosition = currentPosition === moveHistory.length - 1;
+
+  // Record a move for both user and AI moves.
+  function recordMove(move: any) {
+    const newFen = game.fen();
+    const newHistoryItem: MoveHistoryItem = {
+      fen: newFen,
+      lastMove: { from: move.from, to: move.to }
+    };
+    setMoveHistory(prevHistory => {
+      const newHistory =
+        isAtLivePosition
+          ? [...prevHistory, newHistoryItem]
+          : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
+      setCurrentPosition(newHistory.length - 1);
+      setDisplayFen(newFen);
+      highlightLastMove(move.from, move.to);
+      return newHistory;
+    });
+    // Increment the move counter regardless of who made the move.
+    setMoveCount(prevCount => prevCount + 1);
+  }
+
+  // Process a user move. If not at the live position, jump to the live position first.
   function userMove(from: string, to: string, promotion?: string): boolean {
-    // Only allow user moves if it's userColor's turn
-    if (game.turn() !== userColor) return false;
-
+    if (!isAtLivePosition) {
+      const liveFen = moveHistory[moveHistory.length - 1].fen;
+      game.load(liveFen);
+      setDisplayFen(liveFen);
+      setCurrentPosition(moveHistory.length - 1);
+    }
     const move = game.move({ from: from as Square, to: to as Square, promotion });
     if (!move) return false;
-
-    setFen(game.fen());
+    recordMove(move);
+    checkGameStatus();
     setSelectedSquare(null);
     setMoveSquares({});
-    checkGameStatus();
-
-    // If AI's turn
+    // Trigger AI move if game is still active
     if (!game.isGameOver() && game.turn() === aiColor) {
-      setTimeout(makeAIMove, 500);
+      setTimeout(makeAIMove, 1000);
     }
     return true;
   }
 
-  // Let AI do a random move
-  function makeAIMove() {
-    const moves = game.moves();
-    if (moves.length === 0 || game.isGameOver()) return;
-    const randomIndex = Math.floor(Math.random() * moves.length);
-    game.move(moves[randomIndex]);
-    setFen(game.fen());
-    checkGameStatus();
-  }
-
-  // Check for checkmate/stalemate/draw
-  function checkGameStatus() {
-    if (game.isCheckmate()) {
-      // If it's userColor's turn => user is in check => user lost
-      // Otherwise => user delivered checkmate => user won
-      if (game.turn() === userColor) {
-        setGameMessage('Checkmate! You lose.');
-      } else {
-        setGameMessage('Checkmate! You win.');
-      }
-    } else if (game.isStalemate()) {
-      setGameMessage("Stalemate! It's a draw. No legal moves left.");
-    } else if (game.isDraw()) {
-      setGameMessage("It's a draw! No progress can be made.");
-    }
-  }
-
-  // Attempt a move that might be a promotion
+  // Handle pawn promotion
   function tryMove(from: string, to: string) {
     const piece = game.get(from as Square);
     if (
@@ -140,38 +203,28 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
       ((piece.color === 'w' && to.endsWith('8')) ||
         (piece.color === 'b' && to.endsWith('1')))
     ) {
-      // It's a potential promotion
       setPendingPromotion({ from: from as Square, to: to as Square, color: piece.color });
       return false;
     }
     return userMove(from, to);
   }
 
-  // Drag-and-drop
   const onDrop = (sourceSquare: string, targetSquare: string) => {
-    // If not userColor's turn => do nothing
     if (game.turn() !== userColor) return false;
     return tryMove(sourceSquare, targetSquare);
   };
 
-  // Click-to-move
   function onSquareClick(square: string) {
-    if (game.turn() !== userColor) return; // only user color can move
-
-    // If we have a selected square & the clicked square is one of the highlighted moves
+    if (!isAtLivePosition || game.turn() !== userColor) return;
     if (selectedSquare && square !== selectedSquare && moveSquares[square]) {
       tryMove(selectedSquare, square);
       return;
     }
-
-    // If user clicks the same square => deselect
     if (selectedSquare === square) {
       setSelectedSquare(null);
       setMoveSquares({});
       return;
     }
-
-    // Otherwise, highlight if the clicked square has a piece of userColor
     const piece = game.get(square as Square);
     if (piece && piece.color === userColor) {
       const moves = game.moves({ square: square as Square, verbose: true });
@@ -188,7 +241,27 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     }
   }
 
-  // If user picks a piece in the promotion overlay
+  // AI makes a random move and records it
+  function makeAIMove() {
+    const moves = game.moves({ verbose: true });
+    if (moves.length === 0 || game.isGameOver()) return;
+    const randomIndex = Math.floor(Math.random() * moves.length);
+    const aiMove = moves[randomIndex];
+    game.move(aiMove);
+    recordMove(aiMove);
+    checkGameStatus();
+  }
+
+  function checkGameStatus() {
+    if (game.isCheckmate()) {
+      setGameMessage(game.turn() === userColor ? 'Checkmate! You lose.' : 'Checkmate! You win.');
+    } else if (game.isStalemate()) {
+      setGameMessage("Stalemate! It's a draw.");
+    } else if (game.isDraw()) {
+      setGameMessage("It's a draw!");
+    }
+  }
+
   function handlePromotionChoice(piece: 'q' | 'r' | 'b' | 'n') {
     if (!pendingPromotion) return;
     const { from, to } = pendingPromotion;
@@ -196,17 +269,43 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     userMove(from, to, piece);
   }
 
-  // If user clicks away from promotion => discard
   function handleCancelPromotion() {
     setPendingPromotion(null);
   }
 
-  // Format times
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
+  const combinedSquareStyles = { ...highlightSquares, ...moveSquares };
+
+  // Display "Game Start" if moveCount is zero; otherwise "Move X"
+  const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
 
   return (
     <div className="relative">
+      {/* Move navigation controls */}
+      <div className="flex items-center space-x-4 mb-2">
+        <button
+          onClick={handleGoBack}
+          className="px-2 py-1 bg-gray-300 text-black rounded disabled:opacity-50"
+          disabled={currentPosition <= 0}
+        >
+          ←
+        </button>
+        <button
+          onClick={handleGoForward}
+          className="px-2 py-1 bg-gray-300 text-black rounded disabled:opacity-50"
+          disabled={currentPosition >= moveHistory.length - 1}
+        >
+          →
+        </button>
+        <div className="text-gray-200">{moveDisplay}</div>
+        {currentPosition !== moveHistory.length - 1 && (
+          <div className="text-yellow-400 text-sm">
+            Viewing history - click arrows to navigate
+          </div>
+        )}
+      </div>
+
       {/* Clock display */}
       <div className="flex justify-between items-center mb-2 text-white text-lg">
         {orientation === 'white' ? (
@@ -223,16 +322,15 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
       </div>
 
       <Chessboard
-        position={fen}
+        position={displayFen}
         onPieceDrop={onDrop}
         onSquareClick={onSquareClick}
         boardWidth={400}
         boardOrientation={orientation}
-        customSquareStyles={moveSquares}
+        customSquareStyles={combinedSquareStyles}
         customBoardStyle={{ background: 'transparent', boxShadow: 'none' }}
       />
 
-      {/* Promotion Overlay if pending */}
       {pendingPromotion && (
         <PromotionOverlay
           color={pendingPromotion.color}
@@ -241,7 +339,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
         />
       )}
 
-      {/* If there's a game over message, show overlay */}
       {gameMessage && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
           <h1 className="text-white text-2xl font-bold text-center p-4">
@@ -254,8 +351,7 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
 }
 
 /**
- * Renders a top-center overlay with 4 piece glyphs for promotion.
- * If user clicks outside, we cancel. If user clicks a glyph, we finalize that promotion.
+ * Promotion overlay for pawn promotion.
  */
 function PromotionOverlay({
   color,
@@ -266,33 +362,20 @@ function PromotionOverlay({
   onSelect: (piece: 'q' | 'r' | 'b' | 'n') => void;
   onCancel: () => void;
 }) {
-  // Mapping color + piece to the correct Unicode glyph
   const pieceMap = {
-    w: {
-      q: '\u2655', // White Queen
-      r: '\u2656', // White Rook
-      b: '\u2657', // White Bishop
-      n: '\u2658'  // White Knight
-    },
-    b: {
-      q: '\u265B', // Black Queen
-      r: '\u265C', // Black Rook
-      b: '\u265D', // Black Bishop
-      n: '\u265E'  // Black Knight
-    }
+    w: { q: '\u2655', r: '\u2656', b: '\u2657', n: '\u2658' },
+    b: { q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E' }
   };
-
-  // The 4 possible promotions in chess: Q, R, B, N
   const promotions: Array<'q' | 'r' | 'b' | 'n'> = ['q', 'r', 'b', 'n'];
 
   return (
     <div
       className="absolute inset-0 z-30 flex items-start justify-center"
-      onClick={onCancel} // click outside => cancel
+      onClick={onCancel}
     >
       <div
         className="mt-4 p-4 bg-gray-800 text-white rounded shadow-md flex space-x-6"
-        onClick={(e) => e.stopPropagation()} // prevent outside click
+        onClick={(e) => e.stopPropagation()}
       >
         {promotions.map((p) => (
           <div
@@ -300,9 +383,7 @@ function PromotionOverlay({
             className="cursor-pointer transform transition-transform hover:scale-125"
             onClick={() => onSelect(p)}
           >
-            <span className="text-5xl">
-              {pieceMap[color][p]}
-            </span>
+            <span className="text-5xl">{pieceMap[color][p]}</span>
           </div>
         ))}
       </div>
