@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Protected from '../../components/Protected'; // Adjust path if needed
-import ChessBoard from '../../components/ChessBoard'; // Adjust path if needed
+import Link from 'next/link';
+import Protected from '../../components/Protected';
+import ChessBoard from '../../components/ChessBoard';
 import StatisticsSection, { Stats } from '../../components/StatisticsSection';
 
 async function fetchStats(): Promise<Stats> {
@@ -101,6 +102,15 @@ export default function ChessPage() {
                 Random
               </button>
             </div>
+            {/* Home Navigation Button */}
+            <div className="mt-6">
+              <Link
+                href="/"
+                className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+              >
+                Home
+              </Link>
+            </div>
           </div>
         ) : timeControl === null ? (
           <div className="space-y-6 text-center">
@@ -127,6 +137,15 @@ export default function ChessPage() {
                 3 minutes
               </button>
             </div>
+            {/* Home Navigation Button */}
+            <div className="mt-6">
+              <Link
+                href="/"
+                className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+              >
+                Home
+              </Link>
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center">
@@ -139,12 +158,20 @@ export default function ChessPage() {
               timeControl={timeControl}
               onGameEnd={handleGameEnd}
             />
-            <button
-              onClick={handleRestart}
-              className="mt-6 px-6 py-3 bg-white text-gray-800 font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 cursor-pointer"
-            >
-              Restart (Pick Color/Time)
-            </button>
+            <div className="mt-6 flex flex-col space-y-4">
+              <button
+                onClick={handleRestart}
+                className="px-6 py-3 bg-white text-gray-800 font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 cursor-pointer"
+              >
+                Restart (Pick Color/Time)
+              </button>
+              <Link
+                href="/"
+                className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+              >
+                Home
+              </Link>
+            </div>
           </div>
         )}
       </div>

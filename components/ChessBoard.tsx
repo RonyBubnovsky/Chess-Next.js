@@ -175,7 +175,8 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     setSelectedSquare(null);
     setMoveSquares({});
     if (!game.isGameOver() && game.turn() === aiColor) {
-      setTimeout(makeAIMove, 1000);
+      // AI now moves after 1.5 seconds (1500ms)
+      setTimeout(makeAIMove, 1500);
     }
     return true;
   }
@@ -237,7 +238,6 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
 
   function checkGameStatus() {
     if (game.isCheckmate()) {
-      // If it is checkmate, determine if the user won or lost.
       const result = game.turn() === userColor ? 'loss' : 'win';
       if (result === 'win') {
         setGameMessage('Checkmate! You win. You gained +50 ELO.');
