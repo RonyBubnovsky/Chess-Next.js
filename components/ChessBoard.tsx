@@ -9,44 +9,39 @@ type Orientation = 'white' | 'black';
 interface ChessBoardProps {
   orientation: Orientation;
   timeControl: number; // in minutes
+  onGameEnd?: (result: "win" | "loss" | "draw") => void;
 }
 
-// Convert minutes to seconds
 function minutesToSeconds(minutes: number) {
   return minutes * 60;
 }
 
-// Format seconds as mm:ss
 function formatTime(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-// Move history type to store FEN and last move details
 interface MoveHistoryItem {
   fen: string;
   lastMove: { from: string; to: string } | null;
 }
 
-export default function ChessBoard({ orientation, timeControl }: ChessBoardProps) {
-  // Create a stable Chess instance
+export default function ChessBoard({ orientation, timeControl, onGameEnd }: ChessBoardProps) {
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
 
-  // Starting history includes the starting position
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
     { fen: game.fen(), lastMove: null }
   ]);
-  // currentPosition: index in moveHistory (0 is start)
   const [currentPosition, setCurrentPosition] = useState(0);
-  // Separate move counter (0 means no moves yet)
   const [moveCount, setMoveCount] = useState(0);
   const [displayFen, setDisplayFen] = useState(game.fen());
   const [highlightSquares, setHighlightSquares] = useState<{ [square: string]: React.CSSProperties }>({});
   const [gameMessage, setGameMessage] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
+  const [gameEnded, setGameEnded] = useState(false);
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
@@ -61,7 +56,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     color: 'w' | 'b';
   } | null>(null);
 
-  // Highlight the last move made on the board
   const highlightLastMove = useCallback((from: string, to: string) => {
     setHighlightSquares({
       [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
@@ -69,7 +63,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     });
   }, []);
 
-  // Navigate one move back in history
   const handleGoBack = useCallback(() => {
     if (currentPosition > 0) {
       const newPosition = currentPosition - 1;
@@ -86,7 +79,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  // Navigate one move forward in history
   const handleGoForward = useCallback(() => {
     if (currentPosition < moveHistory.length - 1) {
       const newPosition = currentPosition + 1;
@@ -103,7 +95,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  // Keyboard navigation for move history
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft') {
       e.preventDefault();
@@ -119,7 +110,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Setup clock and trigger AI move if necessary
   useEffect(() => {
     if (userColor === 'b') {
       makeAIMove();
@@ -150,10 +140,8 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     return () => clearInterval(clockInterval);
   }, [gameMessage, currentPosition, moveHistory.length, userColor]);
 
-  // Whether we're at the live (latest) position
   const isAtLivePosition = currentPosition === moveHistory.length - 1;
 
-  // Record a move for both user and AI moves.
   function recordMove(move: any) {
     const newFen = game.fen();
     const newHistoryItem: MoveHistoryItem = {
@@ -170,11 +158,9 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
       highlightLastMove(move.from, move.to);
       return newHistory;
     });
-    // Increment the move counter regardless of who made the move.
     setMoveCount(prevCount => prevCount + 1);
   }
 
-  // Process a user move. If not at the live position, jump to the live position first.
   function userMove(from: string, to: string, promotion?: string): boolean {
     if (!isAtLivePosition) {
       const liveFen = moveHistory[moveHistory.length - 1].fen;
@@ -188,20 +174,18 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     checkGameStatus();
     setSelectedSquare(null);
     setMoveSquares({});
-    // Trigger AI move if game is still active
     if (!game.isGameOver() && game.turn() === aiColor) {
       setTimeout(makeAIMove, 1000);
     }
     return true;
   }
 
-  // Handle pawn promotion
   function tryMove(from: string, to: string) {
     const piece = game.get(from as Square);
     if (
       piece?.type === 'p' &&
       ((piece.color === 'w' && to.endsWith('8')) ||
-        (piece.color === 'b' && to.endsWith('1')))
+       (piece.color === 'b' && to.endsWith('1')))
     ) {
       setPendingPromotion({ from: from as Square, to: to as Square, color: piece.color });
       return false;
@@ -241,7 +225,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
     }
   }
 
-  // AI makes a random move and records it
   function makeAIMove() {
     const moves = game.moves({ verbose: true });
     if (moves.length === 0 || game.isGameOver()) return;
@@ -254,11 +237,23 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
 
   function checkGameStatus() {
     if (game.isCheckmate()) {
-      setGameMessage(game.turn() === userColor ? 'Checkmate! You lose.' : 'Checkmate! You win.');
-    } else if (game.isStalemate()) {
-      setGameMessage("Stalemate! It's a draw.");
-    } else if (game.isDraw()) {
+      // If it is checkmate, determine if the user won or lost.
+      const result = game.turn() === userColor ? 'loss' : 'win';
+      if (result === 'win') {
+        setGameMessage('Checkmate! You win. You gained +50 ELO.');
+      } else {
+        setGameMessage('Checkmate! You lose. You lost -50 ELO.');
+      }
+      if (!gameEnded && onGameEnd) {
+        onGameEnd(result);
+        setGameEnded(true);
+      }
+    } else if (game.isStalemate() || game.isDraw()) {
       setGameMessage("It's a draw!");
+      if (!gameEnded && onGameEnd) {
+        onGameEnd('draw');
+        setGameEnded(true);
+      }
     }
   }
 
@@ -277,12 +272,10 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
   const aiClock = formatTime(aiTime);
   const combinedSquareStyles = { ...highlightSquares, ...moveSquares };
 
-  // Display "Game Start" if moveCount is zero; otherwise "Move X"
   const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
 
   return (
     <div className="relative">
-      {/* Move navigation controls */}
       <div className="flex items-center space-x-4 mb-2">
         <button
           onClick={handleGoBack}
@@ -306,7 +299,6 @@ export default function ChessBoard({ orientation, timeControl }: ChessBoardProps
         )}
       </div>
 
-      {/* Clock display */}
       <div className="flex justify-between items-center mb-2 text-white text-lg">
         {orientation === 'white' ? (
           <>
