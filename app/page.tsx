@@ -9,36 +9,43 @@ export default function Home() {
   const { isSignedIn } = useUser();
 
   return (
-    <main className="relative min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-gray-200 to-gray-300">
-      {/* 3D Scene in the background */}
-      <ThreeDScene />
+    <main className="relative min-h-screen flex">
+      {/* Left side: 3D knight animation */}
+      <section className="relative w-1/2 overflow-hidden">
+        <ThreeDScene />
+      </section>
 
-      <div className="relative z-10 max-w-md w-full bg-white bg-opacity-90 backdrop-blur-md rounded-xl p-8 text-center shadow-lg">
-        <h1 className="text-3xl font-bold mb-4">Welcome to Next.js Chess</h1>
-        <p className="text-lg text-gray-700 mb-8">
-          A modern chess experience with Clerk authentication.
-        </p>
-        {isSignedIn ? (
-          <Link href="/chess">
-            <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
-              Play Chess
-            </button>
-          </Link>
-        ) : (
-          <>
-            <Link href="/sign-in">
-              <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition mr-4">
-                Sign In
+      {/* Right side: Welcome panel */}
+      <section className="w-1/2 bg-gradient-to-br from-indigo-300 to-purple-300 flex flex-col items-center justify-center p-10">
+        <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-xl shadow-lg max-w-md w-full p-8 text-center">
+          <h1 className="text-4xl font-bold mb-4 text-gray-800">
+            Welcome to Next.js Chess
+          </h1>
+          <p className="text-lg text-gray-600 mb-8">
+            A modern chess experience with Clerk authentication.
+          </p>
+          {isSignedIn ? (
+            <Link href="/chess">
+              <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-semibold">
+                Play Chess
               </button>
             </Link>
-            <Link href="/sign-up">
-              <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition">
-                Sign Up
-              </button>
-            </Link>
-          </>
-        )}
-      </div>
+          ) : (
+            <div className="space-x-4">
+              <Link href="/sign-in">
+                <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-semibold">
+                  Sign In
+                </button>
+              </Link>
+              <Link href="/sign-up">
+                <button className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition font-semibold">
+                  Sign Up
+                </button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </section>
     </main>
   );
 }

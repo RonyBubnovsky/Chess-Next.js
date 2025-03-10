@@ -1,8 +1,9 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import React, { Suspense, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, useGLTF } from '@react-three/drei';
+import * as THREE from 'three';
 
 export default function ThreeDScene() {
   return (
@@ -12,19 +13,35 @@ export default function ThreeDScene() {
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={1} />
         <Suspense fallback={null}>
-          <RotatingBox />
+          <RotatingRook />
         </Suspense>
       </Canvas>
     </div>
   );
 }
 
-function RotatingBox() {
-  // A simple rotating box for demonstration
+/**
+ * A rotating chess rook model loaded from /public
+ */
+function RotatingRook() {
+  const rookRef = useRef<THREE.Group>(null);
+
+  // Load the model from public
+  const { scene } = useGLTF('/chess-rook.glb');
+
+  // Rotate the rook continuously
+  useFrame((_, delta) => {
+    if (rookRef.current) {
+      rookRef.current.rotation.y += 0.5 * delta;
+    }
+  });
+
   return (
-    <mesh rotation={[0.4, 0.2, 0]}>
-      <boxGeometry args={[2, 2, 2]} />
-      <meshStandardMaterial color="purple" />
-    </mesh>
+    <primitive
+      ref={rookRef}
+      object={scene}
+      scale={15}
+      position={[0, -1, 0]} // move it down a bit so it's centered
+    />
   );
 }
