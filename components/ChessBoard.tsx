@@ -24,21 +24,26 @@ export default function ModernChessBoard({ orientation }: { orientation: Orienta
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
-  // Check checkmate/stalemate
-  const checkGameStatus = () => {
-    if (game.isCheckmate()) {
-      const msg =
-        game.turn() === userColor
-          ? 'Checkmate! You lose. A beautiful defeat indeed.'
-          : 'Checkmate! You win. A brilliant victory!';
-      setGameMessage(msg);
-      return true;
-    } else if (game.isStalemate()) {
-      setGameMessage("Stalemate! It's a draw. No legal moves left.");
-      return true;
-    }
-    return false;
-  };
+  // Check for checkmate, stalemate, or draw
+const checkGameStatus = () => {
+  if (game.isCheckmate()) {
+    const msg =
+      game.turn() === userColor
+        ? 'Checkmate! You lose. A beautiful defeat indeed.'
+        : 'Checkmate! You win. A brilliant victory!';
+    setGameMessage(msg);
+    return true;
+  } else if (game.isStalemate()) {
+    setGameMessage("Stalemate! It's a draw. No legal moves left.");
+    return true;
+  } else if (game.isDraw()) {
+    // Covers threefold repetition, insufficient material, 50-move rule, etc.
+    setGameMessage("It's a draw! No progress can be made.");
+    return true;
+  }
+  return false;
+};
+
 
   // Make a move in the Chess object
   const handleMove = (from: Square, to: Square, promotion?: string) => {
