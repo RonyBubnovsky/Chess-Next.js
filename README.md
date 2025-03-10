@@ -1,36 +1,136 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Next.js Chess App with Clerk Auth & Redis
 
-## Getting Started
+A modern chess application built with **Next.js** and **TypeScript** featuring real-time gameplay, timed matches, and per-user statistics (wins, losses, draws, and dynamic ELO ratings) powered by **Redis**. Authentication is handled by **Clerk** for secure, multi-device access.
 
-First, run the development server:
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Setup & Installation](#setup--installation)
+  - [Environment Variables](#environment-variables)
+  - [Clerk Setup](#clerk-setup)
+  - [Redis Setup](#redis-setup)
+- [Folder Structure](#folder-structure)
+- [Usage](#usage)
+- [License](#license)
+
+---
+
+## Features
+
+- **Real-Time Chess Gameplay:** Play chess against a basic AI with move-by-move updates.
+- **Timed Matches:** Choose between different time controls (3, 5, or 10 minutes).
+- **Per-User Statistics:** Track games played, wins, losses, draws/stalemates, and dynamic ELO ratings.
+- **Authentication:** Secure login using Clerk.
+- **Backend Integration:** Persistent storage for user stats via Redis.
+- **Modern UI:** Responsive and visually appealing design using Tailwind CSS.
+
+---
+
+## Tech Stack
+
+- **Next.js:** React framework for server-side rendering and API routes.
+- **TypeScript:** Type-safe JavaScript for robust, scalable code.
+- **Redis:** Fast, in-memory data store for persisting per-user statistics.
+- **Clerk Auth:** Comprehensive user authentication and management.
+
+---
+
+## Setup & Installation
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/nextjs-chess-app.git
+cd nextjs-chess-app
+```
+
+### 2. Install Dependencies
+
+Install the required packages:
+
+```bash
+npm install
+```
+
+This project uses:
+
+- next
+- react and react-dom
+- typescript
+- redis
+- @clerk/nextjs
+- Tailwind CSS (or your preferred styling framework)
+
+### 3. Create Your Environment Variables
+
+Create a `.env.local` file in the root of your project with the following variables:
+
+```
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+REDIS_USERNAME=
+REDIS_PASSWORD=
+REDIS_HOST=
+REDIS_PORT=
+```
+
+#### How to Get Each Value:
+
+- **NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY & CLERK_SECRET_KEY:**
+
+  - Sign up or log in to [Clerk.dev](https://clerk.dev).
+  - Create a new application in the Clerk dashboard.
+  - In the application settings, locate the Publishable Key and Secret Key.
+  - Copy and paste them into your `.env.local` file.
+
+- **REDIS_USERNAME, REDIS_PASSWORD, REDIS_HOST, REDIS_PORT:**
+  - Sign up or log in to [Redis Cloud](https://redis.com).
+  - Create a new Redis database instance.
+  - In the database dashboard, you will find the connection details (username, password, host, and port).
+  - Copy these values into your `.env.local` file.
+
+### 4. Running the Application
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage
 
-## Learn More
+### Authentication:
 
-To learn more about Next.js, take a look at the following resources:
+Users must log in via Clerk before accessing the chess page.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Game Setup:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Choose your color (or randomize).
+- Select a time control (3, 5, or 10 minutes).
 
-## Deploy on Vercel
+### Gameplay:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Play chess against a basic AI.
+- Moves are tracked, and the game ends with a win, loss, or draw.
+- When the game ends, user stats (games played, wins/losses/draws, and ELO) are updated in Redis via the API.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Statistics:
+
+Before starting a game, your current statistics are displayed in a modern stats box.
+
+### Navigation:
+
+Use the provided "Home" button to navigate back to the main landing page.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
