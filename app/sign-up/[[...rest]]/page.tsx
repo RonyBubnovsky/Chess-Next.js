@@ -11,12 +11,19 @@ export default function SignUpPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
       >
-        {/* Only the Clerk sign-up card, no extra heading/container */}
         <SignUp
           path="/sign-up"
           routing="path"
           appearance={{
             elements: {
+              card: `
+                bg-white/10 
+                backdrop-blur-md 
+                shadow-[0_0_30px_-5px_rgba(0,0,0,0.5)]
+                border border-white/10 
+                p-6 
+                rounded-xl
+              `,
               formButtonPrimary:
                 'transform transition-transform duration-300 hover:scale-105'
             },
