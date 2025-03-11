@@ -18,12 +18,12 @@ const piecePaths = [
 export default function ThreeDScene() {
   const [modelPath, setModelPath] = useState(piecePaths[0]); // start with Rook or any
 
-  // Every 5 seconds, pick a random piece from piecePaths
+  // Every 10 seconds, pick a random piece from piecePaths
   useEffect(() => {
     const interval = setInterval(() => {
       const randomIndex = Math.floor(Math.random() * piecePaths.length);
       setModelPath(piecePaths[randomIndex]);
-    }, 5000);
+    }, 10000);
 
     // Clean up the interval on unmount
     return () => clearInterval(interval);
