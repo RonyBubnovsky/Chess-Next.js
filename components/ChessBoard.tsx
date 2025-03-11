@@ -28,11 +28,11 @@ export default function ChessBoard({
   // Create the chess instance once
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
-
+  
   // Reference to the chessboard container
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  // State
+  // State initialization
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
     { fen: game.fen(), lastMove: null },
   ]);
@@ -55,15 +55,9 @@ export default function ChessBoard({
   const [aiTime, setAiTime] = useState(initialTime);
 
   // Promotion
-  const [pendingPromotion, setPendingPromotion] = useState<{
-    from: Square;
-    to: Square;
-    color: 'w' | 'b';
-  } | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
-  const isAtLivePosition = currentPosition === moveHistory.length - 1;
-
-  // --- Helpers ---
+  // Helpers
   const highlightLastMove = useCallback((from: string, to: string) => {
     setHighlightSquares({
       [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
@@ -103,8 +97,8 @@ export default function ChessBoard({
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         handleGoBack();
@@ -112,10 +106,11 @@ export default function ChessBoard({
         e.preventDefault();
         handleGoForward();
       }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleGoBack, handleGoForward]);
+    },
+    [handleGoBack, handleGoForward]
+  );
+
+  const isAtLivePosition = currentPosition === moveHistory.length - 1;
 
   function recordMove(move: Move) {
     const newFen = game.fen();
@@ -141,11 +136,7 @@ export default function ChessBoard({
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
-      setGameMessage(
-        result === 'win'
-          ? 'Checkmate! You win. You gained +50 ELO.'
-          : 'Checkmate! You lose. You lost -50 ELO.'
-      );
+      setGameMessage(result === 'win' ? 'Checkmate! You win. You gained +50 ELO.' : 'Checkmate! You lose. You lost -50 ELO.');
       if (!gameEnded && onGameEnd) {
         onGameEnd(result);
         setGameEnded(true);
@@ -161,10 +152,10 @@ export default function ChessBoard({
 
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
-
+    
     let result: 'win' | 'loss' | 'draw';
     let message: string;
-
+    
     if (timeoutColor === userColor) {
       result = 'loss';
       message = 'You ran out of time! You lose. You lost -50 ELO.';
@@ -172,9 +163,9 @@ export default function ChessBoard({
       result = 'win';
       message = 'AI ran out of time! You win. You gained +50 ELO.';
     }
-
+    
     setGameMessage(message);
-
+    
     if (onGameEnd) {
       onGameEnd(result);
       setGameEnded(true);
@@ -205,10 +196,9 @@ export default function ChessBoard({
     setSelectedSquare(null);
     setMoveSquares({});
 
-    // Slight delay for AI
     setTimeout(() => {
       makeAIMove();
-    }, 1000);
+    }, 1500);
 
     return true;
   }
@@ -268,17 +258,21 @@ export default function ChessBoard({
     setPendingPromotion(null);
   }
 
-  // Start AI move if orientation is black and user hasn't moved yet
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
   useEffect(() => {
     if (!gameStarted && orientation === 'black') {
       setGameStarted(true);
       setTimeout(() => {
         makeAIMove();
-      }, 1000);
+      }, 1500);
     }
   }, [orientation, gameStarted]);
 
-  // Clocks
   useEffect(() => {
     const clockInterval = setInterval(() => {
       if (gameEnded || game.isGameOver()) return;
@@ -305,14 +299,7 @@ export default function ChessBoard({
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, [
-    userColor,
-    aiColor,
-    gameEnded,
-    currentPosition,
-    moveHistory.length,
-    game,
-  ]);
+  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game]);
 
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
@@ -359,10 +346,10 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* Chessboard */}
-      <div
+      {/* Chessboard - Using a custom wrapper div for better positioning context */}
+      <div 
         ref={boardContainerRef}
-        className="chess-container relative"
+        className="chess-container relative" 
         style={{ width: '400px', height: '400px' }}
       >
         <Chessboard
@@ -375,7 +362,13 @@ export default function ChessBoard({
             ...highlightSquares,
             ...moveSquares,
           }}
+          customBoardStyle={{ 
+            background: 'transparent', 
+            boxShadow: 'none'
+          }}
+          // Disable piece dragging
           arePiecesDraggable={false}
+          // Reduce the animation duration to make piece movement feel more responsive
           animationDuration={200}
         />
       </div>
@@ -398,21 +391,6 @@ export default function ChessBoard({
         </div>
       )}
 
-      {/* Remove custom piece ghost styling that conflicts with react-chessboard */}
-      <style jsx global>{`
-        .chess-container {
-          position: relative;
-          overflow: visible;
-        }
-        .chess-container > div {
-          position: relative;
-          width: 100%;
-          height: 100%;
-        }
-        .square {
-          position: relative !important;
-        }
-      `}</style>
     </div>
   );
 }
