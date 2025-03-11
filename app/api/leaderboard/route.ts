@@ -1,4 +1,4 @@
-// app/api/leaderboard/route.ts
+
 import { NextResponse } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
 import redis from '../../../lib/redis';

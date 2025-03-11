@@ -28,6 +28,9 @@ export default function ChessBoard({
   // Create the chess instance once
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
+  
+  // Reference to the chessboard container
+  const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // State initialization
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
@@ -147,6 +150,28 @@ export default function ChessBoard({
     }
   }
 
+  function endGameByTime(timeoutColor: 'w' | 'b') {
+    if (gameEnded) return;
+    
+    let result: 'win' | 'loss' | 'draw';
+    let message: string;
+    
+    if (timeoutColor === userColor) {
+      result = 'loss';
+      message = 'You ran out of time! You lose. You lost -50 ELO.';
+    } else {
+      result = 'win';
+      message = 'AI ran out of time! You win. You gained +50 ELO.';
+    }
+    
+    setGameMessage(message);
+    
+    if (onGameEnd) {
+      onGameEnd(result);
+      setGameEnded(true);
+    }
+  }
+
   function makeAIMove() {
     if (game.turn() !== aiColor || game.isGameOver()) return;
     const bestMove = findBestMove(game, 3, aiColor);
@@ -233,6 +258,38 @@ export default function ChessBoard({
     setPendingPromotion(null);
   }
 
+  // Fix piece dragging issues
+  useEffect(() => {
+    function fixDraggedPieceStyles() {
+      const boardEl = boardContainerRef.current;
+      if (!boardEl) return;
+      
+      // Set up a MutationObserver to detect when the piece-ghost element is added
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList') {
+            const dragGhost = boardEl.querySelector('.piece-ghost');
+            if (dragGhost) {
+              // Fix the position of the ghost piece
+              (dragGhost as HTMLElement).style.position = 'absolute';
+              (dragGhost as HTMLElement).style.pointerEvents = 'none';
+              (dragGhost as HTMLElement).style.zIndex = '1000';
+              (dragGhost as HTMLElement).style.transform = 'translate(-50%, -50%)';
+            }
+          }
+        });
+      });
+      
+      // Start observing
+      observer.observe(boardEl, { childList: true, subtree: true });
+      
+      // Return cleanup function
+      return () => observer.disconnect();
+    }
+    
+    fixDraggedPieceStyles();
+  }, []);
+
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -249,21 +306,21 @@ export default function ChessBoard({
 
   useEffect(() => {
     const clockInterval = setInterval(() => {
-      if (gameMessage || game.isGameOver()) return;
+      if (gameEnded || game.isGameOver()) return;
       if (currentPosition === moveHistory.length - 1) {
         const turn = game.turn();
         if (turn === userColor) {
           setUserTime((prev) => {
-            if (prev <= 0) {
-              setGameMessage('You ran out of time! You lose.');
+            if (prev <= 1) {
+              endGameByTime(userColor);
               return 0;
             }
             return prev - 1;
           });
         } else {
           setAiTime((prev) => {
-            if (prev <= 0) {
-              setGameMessage('AI ran out of time! You win.');
+            if (prev <= 1) {
+              endGameByTime(aiColor);
               return 0;
             }
             return prev - 1;
@@ -273,7 +330,7 @@ export default function ChessBoard({
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, [userColor, gameMessage, currentPosition, moveHistory.length, game]);
+  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game]);
 
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
@@ -320,19 +377,30 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* Chessboard */}
-      <Chessboard
-        position={displayFen}
-        onPieceDrop={onDrop}
-        onSquareClick={onSquareClick}
-        boardWidth={400}
-        boardOrientation={orientation}
-        customSquareStyles={{
-          ...highlightSquares,
-          ...moveSquares,
-        }}
-        customBoardStyle={{ background: 'transparent', boxShadow: 'none' }}
-      />
+      {/* Chessboard - Using a custom wrapper div for better positioning context */}
+      <div 
+        ref={boardContainerRef}
+        className="chess-container relative" 
+        style={{ width: '400px', height: '400px' }}
+      >
+        <Chessboard
+          position={displayFen}
+          onPieceDrop={onDrop}
+          onSquareClick={onSquareClick}
+          boardWidth={400}
+          boardOrientation={orientation}
+          customSquareStyles={{
+            ...highlightSquares,
+            ...moveSquares,
+          }}
+          customBoardStyle={{ 
+            background: 'transparent', 
+            boxShadow: 'none'
+          }}
+          // Reduce the animation duration to make piece movement feel more responsive
+          animationDuration={200}
+        />
+      </div>
 
       {/* Promotion overlay */}
       {pendingPromotion && (
@@ -351,6 +419,42 @@ export default function ChessBoard({
           </h1>
         </div>
       )}
+
+      {/* Global styles to fix drag issues */}
+      <style jsx global>{`
+        /* Ensure the board has the right positioning context */
+        .chess-container {
+          position: relative;
+          overflow: visible;
+        }
+        
+        /* Fix the board's structure */
+        .chess-container > div {
+          position: relative;
+          width: 100%;
+          height: 100%;
+        }
+        
+        /* Make sure pieces are positioned correctly */
+        .piece {
+          transform-origin: center;
+          will-change: transform;
+        }
+        
+        /* Fix the dragging pieces */
+        .piece-ghost {
+          position: absolute !important;
+          pointer-events: none !important;
+          z-index: 1000 !important;
+          transform: translate(-50%, -50%) !important;
+          opacity: 0.8 !important;
+        }
+        
+        /* Make sure squares are properly sized */
+        .square {
+          position: relative !important;
+        }
+      `}</style>
     </div>
   );
 }
