@@ -2,7 +2,7 @@ import './globals.css';
 import { ClerkProvider } from '@clerk/nextjs';
 
 export const metadata = {
-  title: 'Next.js Chess App',
+  title: 'RonyChess',
   description: 'A modern chess experience with Clerk authentication.'
 };
 
