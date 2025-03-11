@@ -160,6 +160,9 @@ export default function SignUpPage() {
             .cl-socialButtonsIconButton__text,
             .cl-socialButtonsBlockButton__text {
               color: white !important;
+              white-space: nowrap !important;
+              overflow: visible !important;
+              text-overflow: clip !important;
             }
 
             /* Fix overflow issues */
@@ -169,6 +172,24 @@ export default function SignUpPage() {
               max-width: 100% !important;
               box-sizing: border-box !important;
             }
+            
+            /* Ensure social buttons text is fully visible */
+            .cl-socialButtonsBlockButton__text {
+              width: auto !important;
+              min-width: 90px !important;
+            }
+            
+            /* Make social buttons container wider */
+            .cl-socialButtonsIconButton,
+            .cl-socialButtonsBlockButton {
+              min-width: 110px !important;
+            }
+            
+            /* Make the social buttons row have proper spacing */
+            .cl-socialButtonsGroup {
+              justify-content: space-between !important;
+              gap: 12px !important;
+            }
           `}</style>
 
           <SignUp
@@ -177,10 +198,10 @@ export default function SignUpPage() {
             appearance={{
               elements: {
                 card: `
-                  bg-white/10
+                  bg-[#0A0E24]/95
                   backdrop-blur-md
-                  shadow-[0_0_30px_-5px_rgba(0,0,0,0.5)]
-                  border border-white/10
+                  shadow-[0_10px_50px_-12px_rgba(0,0,0,0.9)]
+                  border border-[#2A2F52]
                   p-6
                   rounded-xl
                 `,
@@ -193,10 +214,10 @@ export default function SignUpPage() {
                   text-white/70
                 `,
                 formFieldInput: `
-                  bg-white
-                  border border-gray-300
+                  bg-[#171B3A]
+                  border border-[#2A2F52]
                   rounded-xl
-                  text-gray-900
+                  text-white
                   placeholder:text-gray-400
                   focus:border-purple-500
                   focus:ring-purple-500/30
@@ -207,7 +228,7 @@ export default function SignUpPage() {
                   w-full
                 `,
                 formFieldLabel: `
-                  text-white/80
+                  text-white/90
                   font-medium
                   mb-2
                 `,
@@ -232,15 +253,15 @@ export default function SignUpPage() {
                   font-medium
                 `,
                 dividerLine: `
-                  bg-white/10
+                  bg-[#2A2F52]
                 `,
                 dividerText: `
                   text-white/50
                 `,
                 socialButtonsBlockButton: `
-                  border-white/10
-                  bg-white/10
-                  hover:bg-white/20
+                  border-[#2A2F52]
+                  bg-[#171B3A]
+                  hover:bg-[#1E234A]
                   rounded-xl
                   transition-all
                   text-white
@@ -251,25 +272,67 @@ export default function SignUpPage() {
                   gap-2
                   [&>*]:text-white
                   w-full
+                  min-w-[110px]
                 `,
                 socialButtonsIconButton: `
                   text-white
                   [&>*]:text-white
+                  min-w-[110px]
                 `,
                 socialButtonsProviderIcon: `
                   filter brightness(0) invert(1)
                 `,
+                formFieldAction: `
+                  text-purple-400
+                  hover:text-purple-300
+                `,
+                formFieldErrorText: `
+                  text-red-400
+                  mt-1
+                `,
+                formResendCodeLink: `
+                  text-purple-400
+                  hover:text-purple-300
+                `,
+                identityPreviewEditButton: `
+                  text-purple-400
+                  hover:text-purple-300
+                `,
+                alternativeMethodsBlockButton: `
+                  text-white
+                  bg-[#171B3A]
+                  hover:bg-[#1E234A]
+                  border border-[#2A2F52]
+                  rounded-xl
+                `,
+                socialButtonsIconRow: `
+                  justify-content-between
+                  gap-3
+                `,
+                socialButtonsBlockButtonArrow: `
+                  hidden
+                `,
+                socialButtonsBlockButtonText: `
+                  whitespace-nowrap
+                  overflow-visible
+                `,
+                socialButtonsGroup: `
+                  grid
+                  grid-cols-3 
+                  gap-3
+                `,
               },
               layout: {
                 socialButtonsVariant: 'blockButton',
+                socialButtonsPlacement: 'top',
               },
               variables: {
                 colorPrimary: '#7c3aed',
                 colorText: 'white',
                 colorTextSecondary: 'rgba(255, 255, 255, 0.7)',
                 colorBackground: 'transparent',
-                colorInputText: 'black',
-                colorInputBackground: 'white',
+                colorInputText: 'white',
+                colorInputBackground: '#171B3A',
                 borderRadius: '0.75rem',
                 fontFamily: 'Inter, system-ui, sans-serif',
               },
