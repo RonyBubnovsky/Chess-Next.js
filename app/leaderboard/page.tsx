@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Trophy, ChevronLeft } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 interface LeaderboardEntry {
   position: number;
@@ -15,6 +16,10 @@ interface LeaderboardEntry {
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Retrieve current user from Clerk
+  const { user } = useUser();
+  const currentUsername = user?.username || '';
 
   useEffect(() => {
     fetch('/api/leaderboard')
@@ -31,7 +36,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex flex-col items-center justify-center p-6 text-white overflow-hidden">
-      {/* Animated background bubbles */}
+      {/* Background bubbles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 10 }).map((_, i) => {
           const size = Math.random() * 200 + 80;
@@ -89,7 +94,6 @@ export default function LeaderboardPage() {
 
           {/* Buttons row */}
           <div className="flex items-center gap-2">
-            {/* Back to /chess button */}
             <Link href="/chess" className="group">
               <motion.button
                 className="px-4 py-2 flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl text-white font-medium transition-all group-hover:bg-white/20"
@@ -101,7 +105,6 @@ export default function LeaderboardPage() {
               </motion.button>
             </Link>
 
-            {/* Home button */}
             <Link href="/" className="group">
               <motion.button
                 className="px-4 py-2 flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl text-white font-medium transition-all group-hover:bg-white/20"
@@ -118,7 +121,6 @@ export default function LeaderboardPage() {
         {/* Content */}
         <AnimatePresence mode="wait">
           {loading ? (
-            // Loading state
             <motion.div
               key="loading"
               className="flex flex-col items-center justify-center"
@@ -146,10 +148,11 @@ export default function LeaderboardPage() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              <p className="mt-4 text-xl text-white/70">Loading leaderboard...</p>
+              <p className="mt-4 text-xl text-white/70">
+                Loading leaderboard...
+              </p>
             </motion.div>
           ) : (
-            // Loaded leaderboard
             <motion.div
               key="loaded"
               initial={{ opacity: 0, y: 10 }}
@@ -159,13 +162,13 @@ export default function LeaderboardPage() {
             >
               <div className="overflow-x-auto">
                 <motion.table
-                  className="w-full text-left bg-black/30 border border-white/10 rounded-lg overflow-hidden"
+                  className="w-full text-left bg-black/30 border border-white/10 rounded-xl overflow-hidden"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
                   <thead className="bg-white/10">
-                    <tr>
+                    <tr className="text-sm uppercase tracking-wide text-gray-200">
                       <th className="py-3 px-4 text-center">#</th>
                       <th className="py-3 px-4">Name</th>
                       <th className="py-3 px-4 text-center">ELO</th>
@@ -173,28 +176,35 @@ export default function LeaderboardPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaderboard.map((entry, idx) => (
-                      <motion.tr
-                        key={entry.position}
-                        className="hover:bg-white/10 transition-colors"
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + idx * 0.05 }}
-                      >
-                        <td className="py-3 px-4 text-center border-t border-white/10">
-                          {entry.position}
-                        </td>
-                        <td className="py-3 px-4 border-t border-white/10">
-                          {entry.username}
-                        </td>
-                        <td className="py-3 px-4 text-center border-t border-white/10">
-                          {entry.elo}
-                        </td>
-                        <td className="py-3 px-4 text-center border-t border-white/10">
-                          {entry.rank}
-                        </td>
-                      </motion.tr>
-                    ))}
+                    {leaderboard.map((entry, idx) => {
+                      const isCurrentUser = entry.username === currentUsername;
+                      return (
+                        <motion.tr
+                          key={entry.position}
+                          className={`transition-colors duration-300 ${
+                            isCurrentUser
+                              ? 'bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 text-white font-semibold shadow-md'
+                              : 'hover:bg-white/10'
+                          }`}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 + idx * 0.05 }}
+                        >
+                          <td className="py-3 px-4 text-center border-b border-white/10">
+                            {entry.position}
+                          </td>
+                          <td className="py-3 px-4 border-b border-white/10">
+                            {entry.username}
+                          </td>
+                          <td className="py-3 px-4 text-center border-b border-white/10">
+                            {entry.elo}
+                          </td>
+                          <td className="py-3 px-4 text-center border-b border-white/10">
+                            {entry.rank}
+                          </td>
+                        </motion.tr>
+                      );
+                    })}
                   </tbody>
                 </motion.table>
               </div>
