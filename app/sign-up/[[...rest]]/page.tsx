@@ -13,17 +13,18 @@ export default function SignUpPage() {
     setIsMounted(true);
   }, []);
 
-  // Generate random particles
+  // Generate random particles with quicker timings:
   const particles = Array.from({ length: 50 }).map((_, i) => ({
     id: i,
     size: Math.random() * 5 + 2,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    duration: Math.random() * 20 + 15,
-    delay: Math.random() * 5,
+    // Duration between 2 and 4 seconds
+    duration: Math.random() * 2 + 2,
+    // Minimal delay: 0 to 0.2 seconds
+    delay: Math.random() * 0.2,
   }));
 
-  // Only render client-side
   if (!isMounted) {
     return null;
   }
@@ -66,7 +67,7 @@ export default function SignUpPage() {
           whileTap={{ scale: 0.95 }}
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.2 }}
         >
           <ArrowLeft size={18} />
           <span className="text-sm font-medium">Back</span>
@@ -111,15 +112,20 @@ export default function SignUpPage() {
           className="text-white text-5xl font-bold mb-10 relative"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
         >
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">
             Create an Account
           </span>
         </motion.h1>
 
-        {/* Clerk Sign Up component */}
-        <div className="relative z-10 w-full max-w-md mx-auto">
+        {/* Clerk Sign Up component with delayed fade in */}
+        <motion.div
+          className="relative z-10 w-full max-w-md mx-auto"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.2 }}
+        >
           <style jsx global>{`
             /* Override the Clerk card background */
             .cl-card {
@@ -269,14 +275,14 @@ export default function SignUpPage() {
               },
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Footer text */}
         <motion.div
           className="mt-8 text-white/50 text-sm text-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
+          transition={{ duration: 0.2 }}
         >
           <p>© RonyChess 2025 • Secured with advanced encryption</p>
         </motion.div>
