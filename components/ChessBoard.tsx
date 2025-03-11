@@ -175,17 +175,93 @@ export default function ChessBoard({
     }
   }
 
-  // The AI picks a random move (only if it's actually AI's turn)
-  function makeAIMove() {
-    // Ensure it's the AI's turn
-    if (game.turn() !== aiColor) return;
+  // ===== 1000 ELO Engine Integration =====
+  // Evaluation function based on material values
+  function evaluateBoard(gameInstance: Chess): number {
+    const values: { [piece: string]: number } = {
+      p: 100,
+      n: 320,
+      b: 330,
+      r: 500,
+      q: 900,
+      k: 20000,
+    };
+    let evaluation = 0;
+    const board = gameInstance.board();
+    for (let row of board) {
+      for (let piece of row) {
+        if (piece) {
+          const value = values[piece.type];
+          evaluation += piece.color === aiColor ? value : -value;
+        }
+      }
+    }
+    return evaluation;
+  }
 
-    const moves = game.moves({ verbose: true }) as Move[];
-    if (moves.length === 0 || game.isGameOver()) return;
-    const randomIndex = Math.floor(Math.random() * moves.length);
-    const aiMove = moves[randomIndex];
-    game.move(aiMove);
-    recordMove(aiMove);
+  // Minimax algorithm with alpha-beta pruning
+  function minimax(
+    gameInstance: Chess,
+    depth: number,
+    isMaximizing: boolean,
+    alpha: number,
+    beta: number
+  ): { evaluation: number; move?: Move } {
+    if (depth === 0 || gameInstance.isGameOver()) {
+      return { evaluation: evaluateBoard(gameInstance) };
+    }
+
+    let bestMove: Move | undefined;
+    const moves = gameInstance.moves({ verbose: true }) as Move[];
+
+    if (isMaximizing) {
+      let maxEval = -Infinity;
+      for (let move of moves) {
+        gameInstance.move(move);
+        const result = minimax(gameInstance, depth - 1, false, alpha, beta);
+        gameInstance.undo();
+        if (result.evaluation > maxEval) {
+          maxEval = result.evaluation;
+          bestMove = move;
+        }
+        alpha = Math.max(alpha, result.evaluation);
+        if (beta <= alpha) break;
+      }
+      return { evaluation: maxEval, move: bestMove };
+    } else {
+      let minEval = Infinity;
+      for (let move of moves) {
+        gameInstance.move(move);
+        const result = minimax(gameInstance, depth - 1, true, alpha, beta);
+        gameInstance.undo();
+        if (result.evaluation < minEval) {
+          minEval = result.evaluation;
+          bestMove = move;
+        }
+        beta = Math.min(beta, result.evaluation);
+        if (beta <= alpha) break;
+      }
+      return { evaluation: minEval, move: bestMove };
+    }
+  }
+
+  // Wrapper to find the best move using the engine
+  function findBestMove(gameInstance: Chess, depth: number): Move | null {
+    // Clone the game state to avoid mutating the original
+    const clonedGame = new Chess(gameInstance.fen());
+    const result = minimax(clonedGame, depth, true, -Infinity, Infinity);
+    return result.move || null;
+  }
+
+  // Modified AI move function using the simple engine
+  function makeAIMove() {
+    // Ensure it's the AI's turn and game is not over
+    if (game.turn() !== aiColor || game.isGameOver()) return;
+    // Use the engine to pick a move; a depth of 2 is used for a roughly 1000 ELO level
+    const bestMove = findBestMove(game, 2);
+    if (!bestMove) return;
+    game.move(bestMove);
+    recordMove(bestMove);
     checkGameStatus();
   }
 
