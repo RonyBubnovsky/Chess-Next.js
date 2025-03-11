@@ -169,7 +169,7 @@ const Home: React.FC = () => {
           >
             {/* Left side: Hero section with call to action */}
             <motion.section 
-              className="w-full lg:w-3/5 flex flex-col items-center justify-center p-6 lg:p-16 relative"
+              className="w-full lg:w-[58%] flex flex-col items-center justify-center p-6 lg:p-16 relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -300,7 +300,7 @@ const Home: React.FC = () => {
 
             {/* Right side: 3D chess visualization */}
             <motion.section 
-              className={`w-full lg:w-2/5 relative flex items-center justify-center ${
+              className={`w-full lg:w-[42%] relative flex items-center justify-center ${
                 isDarkMode ? 'bg-gradient-to-b from-gray-900 to-gray-950' : 'bg-gradient-to-b from-gray-100 to-white'
               }`}
               initial={{ opacity: 0 }}
