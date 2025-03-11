@@ -45,7 +45,7 @@
 Check out the live deployment of this application:
 [https://chess-next-js.onrender.com](https://chess-next-js.onrender.com)
 
-## The application is hosted on Render and includes all features from the local version, including authentication via Clerk and persistent statistics storage with Redis.
+The application is hosted on Render and includes all features from the local version, including authentication via Clerk and persistent statistics storage with Redis.
 
 ## Setup & Installation
 
@@ -132,7 +132,7 @@ Before starting a game, your current statistics are displayed in a modern stats 
 
 ### Navigation:
 
-## Use the provided "Home" button to navigate back to the main landing page.
+Use the provided "Home" button to navigate back to the main landing page.
 
 ## Chess AI
 
@@ -155,7 +155,7 @@ The AI evaluates board positions based on:
 
 ## License
 
-## This project is licensed under the MIT License.
+ This project is licensed under the MIT License.
 
 ## Contributing
 
