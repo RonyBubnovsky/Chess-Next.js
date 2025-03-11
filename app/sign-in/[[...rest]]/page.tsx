@@ -13,15 +13,15 @@ export default function SignInPage() {
     setIsMounted(true);
   }, []);
 
-  // Updated particle settings for an even quicker load:
+  // Generate random particles with quicker timings:
   const particles = Array.from({ length: 50 }).map((_, i) => ({
     id: i,
     size: Math.random() * 5 + 2,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    // Reduced durations to between 2 and 4 seconds
+    // Duration between 2 and 4 seconds
     duration: Math.random() * 2 + 2,
-    // Reduced delays to between 0 and 0.2 seconds
+    // Minimal delay: 0 to 0.2 seconds
     delay: Math.random() * 0.2,
   }));
 
@@ -102,15 +102,20 @@ export default function SignInPage() {
           className="text-white text-5xl font-bold mb-10 relative"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
         >
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400">
             Welcome Back
           </span>
         </motion.h1>
 
-        {/* Wrap the SignIn component in a container that constrains its width and centers it */}
-        <div className="w-full max-w-md mx-auto">
+        {/* Wrap the SignIn component in a motion container with delayed fade in */}
+        <motion.div
+          className="w-full max-w-md mx-auto"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, delay: 0.2 }}
+        >
           <style jsx global>{`
             /* Override the Clerk card background */
             .cl-card {
@@ -263,7 +268,7 @@ export default function SignInPage() {
               }
             }}
           />
-        </div>
+        </motion.div>
 
         {/* Footer text */}
         <motion.div
