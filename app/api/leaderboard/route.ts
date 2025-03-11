@@ -1,35 +1,61 @@
 import { NextResponse } from 'next/server';
-import redis from '../../../lib/redis';
 import { clerkClient } from '@clerk/nextjs/server';
+import redis from '../../../lib/redis';
 
 export async function GET() {
-  // Retrieve all keys matching user:*:stats
-  const keys = await redis.keys('user:*:stats');
-  const leaderboard = [];
-
-  // Await clerkClient once outside the loop.
   const clerk = await clerkClient();
+  const leaderboard: Array<{ username: string; elo: number }> = [];
 
-  // For each key, get the stats and fetch the user's Clerk info
-  for (const key of keys) {
-    const statsStr = await redis.get(key);
-    if (!statsStr) continue;
-    const stats = JSON.parse(statsStr);
-    // Extract user id from key: "user:{id}:stats"
-    const match = key.match(/^user:(.+):stats$/);
-    if (!match) continue;
-    const userId = match[1];
-    try {
-      const user = await clerk.users.getUser(userId);
-      // Use clerk username if available, otherwise first name or fallback to "Anonymous"
-      const username = user.username || user.firstName || 'Anonymous';
-      leaderboard.push({ username, elo: stats.elo });
-    } catch (error) {
-      console.error('Error fetching user:', userId, error);
+  // treat cursor as a number in v4, starting at 0
+  let cursor = 0;
+
+  do {
+    // node-redis v4 returns an object: { cursor, keys }
+    const { cursor: newCursor, keys: foundKeys } = await redis.scan(cursor, {
+      MATCH: 'user:*:stats',
+      COUNT: 100,
+    });
+    cursor = newCursor;
+
+    if (foundKeys.length > 0) {
+      const pipeline = redis.multi();
+      for (const key of foundKeys) {
+        pipeline.get(key);
+      }
+      const results = await pipeline.exec(); // array of raw replies
+
+      for (let i = 0; i < foundKeys.length; i++) {
+        const key = foundKeys[i];
+        const statsStr = results[i] as string | null;
+        if (!statsStr) continue;
+
+        const stats = JSON.parse(statsStr);
+
+        // Extract user id from key: "user:{id}:stats"
+        const match = key.match(/^user:(.+):stats$/);
+        if (!match) continue;
+        const userId = match[1];
+
+        // If we already have a username in stats, skip Clerk
+        let { username } = stats;
+        if (!username) {
+          try {
+            const user = await clerk.users.getUser(userId);
+            username = user.username || user.firstName || 'Anonymous';
+            // Store username in stats so future lookups skip Clerk
+            stats.username = username;
+            await redis.set(key, JSON.stringify(stats));
+          } catch (error) {
+            console.error('Error fetching user:', userId, error);
+            continue;
+          }
+        }
+        leaderboard.push({ username, elo: stats.elo });
+      }
     }
-  }
+  } while (cursor !== 0); // Continue scanning until cursor is 0
 
-  // Sort leaderboard descending by ELO and take the top 10 entries
+  // Sort leaderboard descending by ELO and take top 10
   leaderboard.sort((a, b) => b.elo - a.elo);
   const top10 = leaderboard.slice(0, 10);
 
@@ -43,7 +69,11 @@ export async function GET() {
     } else {
       rank = 'GrandMaster';
     }
-    return { position: index + 1, ...entry, rank };
+    return {
+      position: index + 1,
+      ...entry,
+      rank,
+    };
   });
 
   return NextResponse.json(ranked);
