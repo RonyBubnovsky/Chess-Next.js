@@ -6,30 +6,67 @@ import { useUser, useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import ThreeDScene from '../components/ThreeDScene';
 
-export default function Home() {
+/**
+ * A modern loading spinner component.
+ * Uses a linear gradient and a partially opaque path for a modern look.
+ */
+const LoadingSVG: React.FC = () => (
+  <svg className="animate-spin h-6 w-6 text-current" viewBox="0 0 24 24">
+    <defs>
+      <linearGradient id="spinnerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#4f46e5" />
+        <stop offset="100%" stopColor="#3b82f6" />
+      </linearGradient>
+    </defs>
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="url(#spinnerGradient)"
+      strokeWidth="4"
+      fill="none"
+    />
+    <path
+      className="opacity-75"
+      fill="url(#spinnerGradient)"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+    />
+  </svg>
+);
+
+/**
+ * Home page component.
+ * Renders the main content including theme toggle, ambient particles background,
+ * call-to-action buttons with loading states, and a 3D chess visualization.
+ */
+const Home: React.FC = () => {
   const { isSignedIn, user } = useUser();
   const { signOut } = useAuth();
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
+  
+  // State to toggle dark/light mode
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  // State to simulate content load
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  // State to prevent mismatch during client-side hydration
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  // State for which button is currently in loading state. Accepts string identifiers or null.
+  const [loadingButton, setLoadingButton] = useState<string | null>(null);
 
-  // Display name logic
-  const displayName = user?.firstName || user?.username || 'Friend';
+  // Compute display name for the logged in user.
+  const displayName: string = user?.firstName || user?.username || 'Friend';
 
-  // Handle client-side rendering
+  // Handle client-side hydration and set theme based on user preference.
   useEffect(() => {
     setIsMounted(true);
-    // Set initial theme based on user preference
     setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    // Simulate loading state
     const timer = setTimeout(() => setIsLoaded(true), 400);
     return () => clearTimeout(timer);
   }, []);
 
-  // Generate ambient particles - only after component is mounted
+  // Generate ambient particles only when the component is mounted.
   const particles = useMemo(() => {
     if (!isMounted) return [];
-    
     return Array.from({ length: 30 }).map(() => {
       const size = Math.random() * 8 + 2;
       return {
@@ -45,10 +82,10 @@ export default function Home() {
     });
   }, [isMounted]);
 
-  // Theme toggle
+  // Toggle the theme between dark and light mode.
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // Early return before client-side hydration to prevent mismatch
+  // Prevent rendering until client-side hydration is complete.
   if (!isMounted) {
     return <div className="min-h-screen bg-gray-50"></div>;
   }
@@ -59,7 +96,7 @@ export default function Home() {
         isDarkMode ? 'bg-gray-950' : 'bg-gray-50'
       }`}
     >
-      {/* Theme toggle */}
+      {/* Theme toggle button */}
       <motion.button
         className={`fixed top-5 right-5 z-50 p-2 rounded-full ${
           isDarkMode ? 'bg-gray-800' : 'bg-white'
@@ -121,7 +158,7 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Content container */}
+      {/* Main content container */}
       <AnimatePresence>
         {isLoaded && (
           <motion.div 
@@ -130,7 +167,7 @@ export default function Home() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.8 }}
           >
-            {/* Left side: Hero and call to action */}
+            {/* Left side: Hero section with call to action */}
             <motion.section 
               className="w-full lg:w-3/5 flex flex-col items-center justify-center p-6 lg:p-16 relative"
               initial={{ opacity: 0, y: 20 }}
@@ -175,8 +212,10 @@ export default function Home() {
                 >
                   {isSignedIn ? (
                     <>
+                      {/* Start Playing Button */}
                       <Link href="/chess">
                         <motion.button
+                          onClick={() => setLoadingButton("startPlaying")}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium ${
@@ -184,12 +223,18 @@ export default function Home() {
                               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30' 
                               : 'bg-gradient-to-r from-indigo-600 to-blue-700 text-white shadow-lg shadow-indigo-500/20'
                           } transition`}
+                          disabled={loadingButton === "startPlaying"}
                         >
-                          Start Playing
+                          {loadingButton === "startPlaying" ? <LoadingSVG /> : "Start Playing"}
                         </motion.button>
                       </Link>
+                      {/* Sign Out Button */}
                       <motion.button
-                        onClick={() => signOut()}
+                        onClick={async () => {
+                          setLoadingButton("signOut");
+                          await signOut();
+                          setLoadingButton(null);
+                        }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium transition ${
@@ -197,14 +242,17 @@ export default function Home() {
                             ? 'bg-gray-800 text-gray-200 border border-gray-700'
                             : 'bg-white text-gray-800 border border-gray-200 shadow-md'
                         }`}
+                        disabled={loadingButton === "signOut"}
                       >
-                        Sign Out
+                        {loadingButton === "signOut" ? <LoadingSVG /> : "Sign Out"}
                       </motion.button>
                     </>
                   ) : (
                     <>
+                      {/* Join Now Button */}
                       <Link href="/sign-up">
                         <motion.button
+                          onClick={() => setLoadingButton("joinNow")}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium ${
@@ -212,12 +260,15 @@ export default function Home() {
                               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/30' 
                               : 'bg-gradient-to-r from-indigo-600 to-blue-700 text-white shadow-lg shadow-indigo-500/20'
                           } transition`}
+                          disabled={loadingButton === "joinNow"}
                         >
-                          Join Now
+                          {loadingButton === "joinNow" ? <LoadingSVG /> : "Join Now"}
                         </motion.button>
                       </Link>
+                      {/* Sign In Button */}
                       <Link href="/sign-in">
                         <motion.button
+                          onClick={() => setLoadingButton("signIn")}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium transition ${
@@ -225,8 +276,9 @@ export default function Home() {
                               ? 'bg-gray-800 text-gray-200 border border-gray-700'
                               : 'bg-white text-gray-800 border border-gray-200 shadow-md'
                           }`}
+                          disabled={loadingButton === "signIn"}
                         >
-                          Sign In
+                          {loadingButton === "signIn" ? <LoadingSVG /> : "Sign In"}
                         </motion.button>
                       </Link>
                     </>
@@ -265,14 +317,14 @@ export default function Home() {
                 transition={{ duration: 1.2, delay: 1 }}
               />
               
-              {/* 3D Scene container*/}
+              {/* 3D Scene container */}
               <motion.div 
                 className="relative w-3/5 h-2/5 flex items-center justify-center ml-8"
                 initial={{ opacity: 0, rotateY: -20 }}
                 animate={{ opacity: 1, rotateY: 0 }}
                 transition={{ duration: 1, delay: 0.5 }}
               >
-                {/*3D chess piece component*/}
+                {/* 3D chess piece component */}
                 <div className="w-4/5 h-4/5">
                   <ThreeDScene />
                 </div>
@@ -283,4 +335,6 @@ export default function Home() {
       </AnimatePresence>
     </main>
   );
-}
+};
+
+export default Home;
