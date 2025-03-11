@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess, Square, Move } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
+import PromotionOverlay from './PromotionOverlay';
+import { minutesToSeconds, formatTime } from '../lib/utils';
+import { findBestMove } from '../lib/chessEngine';
 
 type Orientation = 'white' | 'black';
 
@@ -10,16 +13,6 @@ interface ChessBoardProps {
   orientation: Orientation;
   timeControl: number; // in minutes
   onGameEnd?: (result: 'win' | 'loss' | 'draw') => void;
-}
-
-function minutesToSeconds(minutes: number) {
-  return minutes * 60;
-}
-
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
 interface MoveHistoryItem {
@@ -36,21 +29,17 @@ export default function ChessBoard({
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
 
-  // State
+  // State initialization
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
     { fen: game.fen(), lastMove: null },
   ]);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [moveCount, setMoveCount] = useState(0);
   const [displayFen, setDisplayFen] = useState(game.fen());
-  const [highlightSquares, setHighlightSquares] = useState<{
-    [square: string]: React.CSSProperties;
-  }>({});
+  const [highlightSquares, setHighlightSquares] = useState<{ [square: string]: React.CSSProperties }>({});
   const [gameMessage, setGameMessage] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [moveSquares, setMoveSquares] = useState<{
-    [square: string]: React.CSSProperties;
-  }>({});
+  const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
   const [gameEnded, setGameEnded] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
 
@@ -63,11 +52,7 @@ export default function ChessBoard({
   const [aiTime, setAiTime] = useState(initialTime);
 
   // Promotion
-  const [pendingPromotion, setPendingPromotion] = useState<{
-    from: Square;
-    to: Square;
-    color: 'w' | 'b';
-  } | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
   // Helpers
   const highlightLastMove = useCallback((from: string, to: string) => {
@@ -77,14 +62,12 @@ export default function ChessBoard({
     });
   }, []);
 
-  // Goes back exactly one move in the moveHistory
   const handleGoBack = useCallback(() => {
     if (currentPosition > 0) {
       const newPosition = currentPosition - 1;
       setCurrentPosition(newPosition);
       const historyItem = moveHistory[newPosition];
       setDisplayFen(historyItem.fen);
-
       if (historyItem.lastMove) {
         highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
       } else {
@@ -95,14 +78,12 @@ export default function ChessBoard({
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  // Goes forward exactly one move in the moveHistory
   const handleGoForward = useCallback(() => {
     if (currentPosition < moveHistory.length - 1) {
       const newPosition = currentPosition + 1;
       setCurrentPosition(newPosition);
       const historyItem = moveHistory[newPosition];
       setDisplayFen(historyItem.fen);
-
       if (historyItem.lastMove) {
         highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
       } else {
@@ -126,10 +107,8 @@ export default function ChessBoard({
     [handleGoBack, handleGoForward]
   );
 
-  // Are we at the "live" position?
   const isAtLivePosition = currentPosition === moveHistory.length - 1;
 
-  // Record a move in the history (each half-move)
   function recordMove(move: Move) {
     const newFen = game.fen();
     const newHistoryItem: MoveHistoryItem = {
@@ -138,8 +117,6 @@ export default function ChessBoard({
     };
 
     setMoveHistory((prevHistory) => {
-      // If at live position, just push
-      // Otherwise, truncate and then push
       const newHistory = isAtLivePosition
         ? [...prevHistory, newHistoryItem]
         : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
@@ -153,15 +130,10 @@ export default function ChessBoard({
     setMoveCount((prevCount) => prevCount + 1);
   }
 
-  // Check for checkmate, draw, etc.
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
-      if (result === 'win') {
-        setGameMessage('Checkmate! You win. You gained +50 ELO.');
-      } else {
-        setGameMessage('Checkmate! You lose. You lost -50 ELO.');
-      }
+      setGameMessage(result === 'win' ? 'Checkmate! You win. You gained +50 ELO.' : 'Checkmate! You lose. You lost -50 ELO.');
       if (!gameEnded && onGameEnd) {
         onGameEnd(result);
         setGameEnded(true);
@@ -175,111 +147,23 @@ export default function ChessBoard({
     }
   }
 
-  // ===== 1000 ELO Engine Integration =====
-  // Evaluation function based on material values
-  function evaluateBoard(gameInstance: Chess): number {
-    const values: { [piece: string]: number } = {
-      p: 100,
-      n: 320,
-      b: 330,
-      r: 500,
-      q: 900,
-      k: 20000,
-    };
-    let evaluation = 0;
-    const board = gameInstance.board();
-    for (let row of board) {
-      for (let piece of row) {
-        if (piece) {
-          const value = values[piece.type];
-          evaluation += piece.color === aiColor ? value : -value;
-        }
-      }
-    }
-    return evaluation;
-  }
-
-  // Minimax algorithm with alpha-beta pruning
-  function minimax(
-    gameInstance: Chess,
-    depth: number,
-    isMaximizing: boolean,
-    alpha: number,
-    beta: number
-  ): { evaluation: number; move?: Move } {
-    if (depth === 0 || gameInstance.isGameOver()) {
-      return { evaluation: evaluateBoard(gameInstance) };
-    }
-
-    let bestMove: Move | undefined;
-    const moves = gameInstance.moves({ verbose: true }) as Move[];
-
-    if (isMaximizing) {
-      let maxEval = -Infinity;
-      for (let move of moves) {
-        gameInstance.move(move);
-        const result = minimax(gameInstance, depth - 1, false, alpha, beta);
-        gameInstance.undo();
-        if (result.evaluation > maxEval) {
-          maxEval = result.evaluation;
-          bestMove = move;
-        }
-        alpha = Math.max(alpha, result.evaluation);
-        if (beta <= alpha) break;
-      }
-      return { evaluation: maxEval, move: bestMove };
-    } else {
-      let minEval = Infinity;
-      for (let move of moves) {
-        gameInstance.move(move);
-        const result = minimax(gameInstance, depth - 1, true, alpha, beta);
-        gameInstance.undo();
-        if (result.evaluation < minEval) {
-          minEval = result.evaluation;
-          bestMove = move;
-        }
-        beta = Math.min(beta, result.evaluation);
-        if (beta <= alpha) break;
-      }
-      return { evaluation: minEval, move: bestMove };
-    }
-  }
-
-  // Wrapper to find the best move using the engine
-  function findBestMove(gameInstance: Chess, depth: number): Move | null {
-    // Clone the game state to avoid mutating the original
-    const clonedGame = new Chess(gameInstance.fen());
-    const result = minimax(clonedGame, depth, true, -Infinity, Infinity);
-    return result.move || null;
-  }
-
-  // Modified AI move function using the simple engine
   function makeAIMove() {
-    // Ensure it's the AI's turn and game is not over
     if (game.turn() !== aiColor || game.isGameOver()) return;
-    // Use the engine to pick a move; a depth of 3 is used for a roughly 1500 ELO level
-    const bestMove = findBestMove(game, 3);
+    const bestMove = findBestMove(game, 3, aiColor);
     if (!bestMove) return;
     game.move(bestMove);
     recordMove(bestMove);
     checkGameStatus();
   }
 
-  // Make a user move
   function userMove(from: string, to: string, promotion?: string): boolean {
     if (!isAtLivePosition) {
-      // Load the live position
       const liveFen = moveHistory[moveHistory.length - 1].fen;
       game.load(liveFen);
       setDisplayFen(liveFen);
       setCurrentPosition(moveHistory.length - 1);
     }
-
-    const move = game.move({
-      from: from as Square,
-      to: to as Square,
-      promotion,
-    }) as Move | null;
+    const move = game.move({ from: from as Square, to: to as Square, promotion }) as Move | null;
     if (!move) return false;
 
     recordMove(move);
@@ -287,7 +171,6 @@ export default function ChessBoard({
     setSelectedSquare(null);
     setMoveSquares({});
 
-    // AI move if it's AI's turn
     setTimeout(() => {
       makeAIMove();
     }, 1500);
@@ -295,13 +178,11 @@ export default function ChessBoard({
     return true;
   }
 
-  // Check if we need to promote
   function tryMove(from: string, to: string) {
     const piece = game.get(from as Square);
     if (
       piece?.type === 'p' &&
-      ((piece.color === 'w' && to.endsWith('8')) ||
-        (piece.color === 'b' && to.endsWith('1')))
+      ((piece.color === 'w' && to.endsWith('8')) || (piece.color === 'b' && to.endsWith('1')))
     ) {
       setPendingPromotion({ from: from as Square, to: to as Square, color: piece.color });
       return false;
@@ -309,7 +190,6 @@ export default function ChessBoard({
     return userMove(from, to);
   }
 
-  // Chessboard callbacks
   function onDrop(sourceSquare: string, targetSquare: string) {
     if (game.turn() !== userColor) return false;
     return tryMove(sourceSquare, targetSquare);
@@ -328,10 +208,8 @@ export default function ChessBoard({
     }
     const piece = game.get(square as Square);
     if (piece && piece.color === userColor) {
-      // Show possible moves
       const moves = game.moves({ square: square as Square, verbose: true }) as Move[];
       const newSquares: { [sq: string]: React.CSSProperties } = {};
-
       moves.forEach((m) => {
         newSquares[m.to] = { backgroundColor: 'rgba(0, 255, 0, 0.4)' };
       });
@@ -344,7 +222,6 @@ export default function ChessBoard({
     }
   }
 
-  // Handle promotion
   function handlePromotionChoice(piece: 'q' | 'r' | 'b' | 'n') {
     if (!pendingPromotion) return;
     const { from, to } = pendingPromotion;
@@ -356,29 +233,23 @@ export default function ChessBoard({
     setPendingPromotion(null);
   }
 
-  // Keydown listener for arrow keys
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Make AI's first move if player is black
   useEffect(() => {
-    // Only run this effect once when the component mounts
     if (!gameStarted && orientation === 'black') {
       setGameStarted(true);
-      // Add a small delay to make it feel more natural
       setTimeout(() => {
         makeAIMove();
       }, 1500);
     }
   }, [orientation, gameStarted]);
 
-  // Clock effect
   useEffect(() => {
     const clockInterval = setInterval(() => {
       if (gameMessage || game.isGameOver()) return;
-      // Only tick the clock if we're at the live position
       if (currentPosition === moveHistory.length - 1) {
         const turn = game.turn();
         if (turn === userColor) {
@@ -404,7 +275,6 @@ export default function ChessBoard({
     return () => clearInterval(clockInterval);
   }, [userColor, gameMessage, currentPosition, moveHistory.length, game]);
 
-  // Clocks + Move Display
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
   const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
@@ -450,7 +320,7 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* The chessboard */}
+      {/* Chessboard */}
       <Chessboard
         position={displayFen}
         onPieceDrop={onDrop}
@@ -473,7 +343,7 @@ export default function ChessBoard({
         />
       )}
 
-      {/* Game message (checkmate/draw) */}
+      {/* Game message */}
       {gameMessage && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
           <h1 className="text-white text-2xl font-bold text-center p-4">
@@ -481,47 +351,6 @@ export default function ChessBoard({
           </h1>
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * Promotion overlay for pawn promotion.
- */
-function PromotionOverlay({
-  color,
-  onSelect,
-  onCancel,
-}: {
-  color: 'w' | 'b';
-  onSelect: (piece: 'q' | 'r' | 'b' | 'n') => void;
-  onCancel: () => void;
-}) {
-  const pieceMap = {
-    w: { q: '\u2655', r: '\u2656', b: '\u2657', n: '\u2658' },
-    b: { q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E' },
-  };
-  const promotions: Array<'q' | 'r' | 'b' | 'n'> = ['q', 'r', 'b', 'n'];
-
-  return (
-    <div
-      className="absolute inset-0 z-30 flex items-start justify-center"
-      onClick={onCancel}
-    >
-      <div
-        className="mt-4 p-4 bg-gray-800 text-white rounded shadow-md flex space-x-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {promotions.map((p) => (
-          <div
-            key={p}
-            className="cursor-pointer transform transition-transform hover:scale-125"
-            onClick={() => onSelect(p)}
-          >
-            <span className="text-5xl">{pieceMap[color][p]}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
