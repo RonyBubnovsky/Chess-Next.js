@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -102,13 +103,19 @@ export default function ChessPage() {
                 Random
               </button>
             </div>
-            {/* Home Navigation Button */}
-            <div className="mt-6">
+            {/* Home and Leaderboard Navigation Buttons */}
+            <div className="mt-6 flex space-x-4">
               <Link
                 href="/"
                 className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
               >
                 Home
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="px-6 py-3 bg-green-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+              >
+                Leaderboard
               </Link>
             </div>
           </div>
@@ -137,13 +144,19 @@ export default function ChessPage() {
                 3 minutes
               </button>
             </div>
-            {/* Home Navigation Button */}
-            <div className="mt-6">
+            {/* Home and Leaderboard Navigation Buttons */}
+            <div className="mt-6 flex space-x-4">
               <Link
                 href="/"
                 className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
               >
                 Home
+              </Link>
+              <Link
+                href="/leaderboard"
+                className="px-6 py-3 bg-green-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+              >
+                Leaderboard
               </Link>
             </div>
           </div>
@@ -165,12 +178,20 @@ export default function ChessPage() {
               >
                 Restart (Pick Color/Time)
               </button>
-              <Link
-                href="/"
-                className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
-              >
-                Home
-              </Link>
+              <div className="flex space-x-4">
+                <Link
+                  href="/"
+                  className="px-6 py-3 bg-blue-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+                >
+                  Home
+                </Link>
+                <Link
+                  href="/leaderboard"
+                  className="px-6 py-3 bg-green-500 text-white font-semibold rounded-md transition shadow-sm transform hover:scale-105 hover:-translate-y-0.5"
+                >
+                  Leaderboard
+                </Link>
+              </div>
             </div>
           </div>
         )}
