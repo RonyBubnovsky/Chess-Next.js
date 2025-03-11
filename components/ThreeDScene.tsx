@@ -23,7 +23,7 @@ export default function ThreeDScene() {
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={1} />
         <Suspense fallback={null}>
-          <FloatingPieces />
+          <SpinningPieces />
         </Suspense>
       </Canvas>
     </div>
@@ -31,11 +31,11 @@ export default function ThreeDScene() {
 }
 
 /**
- * Component that creates multiple floating and rotating chess pieces
+ * Component that creates multiple spinning chess pieces
  */
-function FloatingPieces() {
+function SpinningPieces() {
   return (
-    <group>
+    <group position={[0, -0.5, 0]}>
       {piecePaths.map((path, index) => {
         // Calculate position in a circular formation
         const angle = (index / piecePaths.length) * Math.PI * 2;
@@ -43,16 +43,21 @@ function FloatingPieces() {
         const x = Math.sin(angle) * radius;
         const z = Math.cos(angle) * radius;
         
-        // Create a different phase for each piece to make movement look natural
-        const phase = Math.random() * Math.PI * 2;
+        // Different spin speeds for each piece
+        const spinSpeed = 0.8 + Math.random() * 0.3;
+        
+        // Different floating speeds and heights
+        const floatSpeed = 0.3 + Math.random() * 0.2;
+        const floatHeight = 0.2 + Math.random() * 0.1;
         
         return (
-          <FloatingPiece 
+          <SpinningPiece 
             key={path}
             modelPath={path}
             position={[x, 0, z]}
-            phase={phase}
-            rotationSpeed={0.4 + Math.random() * 0.3} // Slightly different speeds
+            spinSpeed={spinSpeed}
+            floatSpeed={floatSpeed}
+            floatHeight={floatHeight}
           />
         );
       })}
@@ -61,20 +66,23 @@ function FloatingPieces() {
 }
 
 /**
- * A floating and rotating chess piece model loaded from the given path.
+ * A spinning chess piece model that spins like a ballet dancer.
  */
-function FloatingPiece({ 
+function SpinningPiece({ 
   modelPath, 
   position, 
-  phase, 
-  rotationSpeed 
+  spinSpeed,
+  floatSpeed,
+  floatHeight
 }: { 
   modelPath: string, 
-  position: [number, number, number], 
-  phase: number,
-  rotationSpeed: number
+  position: [number, number, number],
+  spinSpeed: number,
+  floatSpeed: number,
+  floatHeight: number
 }) {
-  const pieceRef = useRef<THREE.Group>(null);
+  // Create a container for positioning and floating
+  const containerRef = useRef<THREE.Group>(null);
   
   // Load the model from /public
   const { scene } = useGLTF(modelPath);
@@ -84,31 +92,38 @@ function FloatingPiece({
     return scene.clone();
   }, [scene]);
   
-  // Set the initial orientation
+  // Set the initial orientation to make pieces right-side up
   React.useEffect(() => {
     if (clonedScene) {
-      clonedScene.rotation.set(-Math.PI / 2, Math.PI, 0);
+      clonedScene.rotation.set(Math.PI / 2, 0, 0);
+      
+      // Optional: adjust the vertical position of the model within its container
+      clonedScene.position.y = -0.2;
     }
   }, [clonedScene]);
   
-  // Animate the piece to float up and down and rotate
+  // Animate the piece to float up and down and spin around its vertical axis
   useFrame((_, delta) => {
-    if (pieceRef.current) {
-      // Rotate around its own axis
-      pieceRef.current.rotation.y += rotationSpeed * delta;
+    if (containerRef.current) {
+      // Spin around the vertical axis (like a ballet dancer)
+      containerRef.current.rotation.y += spinSpeed * delta;
       
-      // Float up and down with sine wave
+      // Calculate vertical position using sine for smooth floating
+      // Reduced floating height by using a smaller multiplier
       const time = performance.now() * 0.001;
-      pieceRef.current.position.y = Math.sin(time + phase) * 0.3; // 0.3 is the float height
+      containerRef.current.position.y = Math.sin(time * floatSpeed) * (floatHeight * 0.7);
     }
   });
   
   return (
-    <primitive
-      ref={pieceRef}
-      object={clonedScene}
-      scale={0.05} // Made smaller to fit multiple pieces
+    <group 
+      ref={containerRef} 
       position={position}
-    />
+    >
+      <primitive
+        object={clonedScene}
+        scale={0.05} // Made smaller to fit multiple pieces
+      />
+    </group>
   );
 }
