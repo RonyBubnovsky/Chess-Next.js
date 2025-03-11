@@ -226,22 +226,27 @@ export default function ChessPage(): ReactElement {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
                   {/* White option */}
                   <motion.div
-                    className={`relative overflow-hidden rounded-xl border-2 ${hoveredColor === 'white' ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
+                    className={`relative overflow-hidden rounded-xl border-2 ${
+                      hoveredColor === 'white' ? 'border-indigo-400' : 'border-white/10'
+                    } transition-all cursor-pointer`}
                     whileHover={{ scale: 1.03, y: -3 }}
                     whileTap={{ scale: 0.98 }}
                     onHoverStart={() => setHoveredColor('white')}
                     onHoverEnd={() => setHoveredColor(null)}
                     onClick={() => handleChooseColor('white')}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-300 opacity-20" />
+                    {/* Lighter gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white to-gray-100 opacity-80" />
+
+                    {/* Content on top */}
                     <div className="p-6 flex flex-col items-center relative z-10">
                       <div className="h-16 w-16 rounded-full bg-white mb-3 flex items-center justify-center shadow-lg">
-                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-gray-100 to-white flex items-center justify-center text-3xl">
+                        <div className="h-14 w-14 rounded-full bg-gradient-to-br from-white to-gray-100 flex items-center justify-center text-3xl text-black">
                           ♔
                         </div>
                       </div>
-                      <h3 className="text-xl font-semibold mb-1">Play White</h3>
-                      <p className="text-white/60 text-sm">Move first</p>
+                      <h3 className="text-xl font-semibold mb-1 text-black">Play White</h3>
+                      <p className="text-black/60 text-sm">Move first</p>
                     </div>
                   </motion.div>
 
