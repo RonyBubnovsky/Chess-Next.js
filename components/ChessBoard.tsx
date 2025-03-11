@@ -257,8 +257,8 @@ export default function ChessBoard({
   function makeAIMove() {
     // Ensure it's the AI's turn and game is not over
     if (game.turn() !== aiColor || game.isGameOver()) return;
-    // Use the engine to pick a move; a depth of 2 is used for a roughly 1000 ELO level
-    const bestMove = findBestMove(game, 2);
+    // Use the engine to pick a move; a depth of 3 is used for a roughly 1500 ELO level
+    const bestMove = findBestMove(game, 3);
     if (!bestMove) return;
     game.move(bestMove);
     recordMove(bestMove);
