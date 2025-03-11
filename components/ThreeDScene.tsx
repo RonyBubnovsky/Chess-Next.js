@@ -59,10 +59,10 @@ function RotatingPiece({ modelPath }: { modelPath: string }) {
     }
   }, [scene]);
 
-  // Continuously rotate around the x axis
+  // Continuously rotate around the y axis
   useFrame((_, delta) => {
     if (pieceRef.current) {
-      pieceRef.current.rotation.x += 0.5 * delta;
+      pieceRef.current.rotation.y += 0.5 * delta;
     }
   });
 
