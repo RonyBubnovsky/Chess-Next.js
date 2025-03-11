@@ -1,6 +1,6 @@
 # Next.js Chess App with Clerk Auth & Redis
 
-## A modern chess application built with **Next.js** and **TypeScript** featuring real-time gameplay, timed matches, and per-user statistics (wins, losses, draws, and dynamic ELO ratings) powered by **Redis**. Authentication is handled by **Clerk** for secure, multi-device access. The chess AI utilizes a minimax algorithm with alpha-beta pruning to determine optimal moves.
+### A modern chess application built with **Next.js** and **TypeScript** featuring real-time gameplay, timed matches, and per-user statistics (wins, losses, draws, and dynamic ELO ratings) powered by **Redis**. Authentication is handled by **Clerk** for secure, multi-device access. The chess AI utilizes a minimax algorithm with alpha-beta pruning to determine optimal moves.
 
 ## Table of Contents
 
@@ -107,7 +107,7 @@ Start the development server:
 npm run dev
 ```
 
-## Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
 
 ## Usage
 
