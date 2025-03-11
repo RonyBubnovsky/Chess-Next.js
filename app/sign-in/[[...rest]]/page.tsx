@@ -74,7 +74,7 @@ export default function SignInPage() {
         </motion.button>
       </Link>
 
-      {/* Main content container: centers everything both horizontally and vertically */}
+      {/* Main content container */}
       <div className="min-h-screen flex flex-col items-center justify-center p-6 max-w-full">
         {/* Chess-themed decorative element */}
         <motion.div 
@@ -109,9 +109,9 @@ export default function SignInPage() {
           </span>
         </motion.h1>
 
-        {/* Wrap the SignIn component in a motion container with delayed fade in */}
+        {/* Clerk Sign In component with delayed fade in */}
         <motion.div
-          className="w-full max-w-md mx-auto"
+          className="relative z-10 w-full max-w-md mx-auto"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.2 }}
@@ -125,51 +125,75 @@ export default function SignInPage() {
             }
             
             /* Override the Clerk container */
-            .cl-rootBox, .cl-containerBox, .cl-component {
+            .cl-rootBox,
+            .cl-containerBox,
+            .cl-component {
               background-color: transparent !important;
               max-width: 100% !important;
               width: 100% !important;
             }
-            
+
             /* Global styles to force white text in social buttons */
-            .cl-socialButtonsBlockButton, 
-            .cl-socialButtonsBlockButton span, 
+            .cl-socialButtonsBlockButton,
+            .cl-socialButtonsBlockButton span,
             .cl-socialButtonsBlockButton div {
               color: white !important;
             }
 
             /* Target the Google button specifically if needed */
-            .cl-socialButtonsBlockButton[data-provider="google"],
-            .cl-socialButtonsBlockButton[data-provider="google"] * {
+            .cl-socialButtonsBlockButton[data-provider='google'],
+            .cl-socialButtonsBlockButton[data-provider='google'] * {
               color: white !important;
             }
-            
+
             /* Additional specific targeting for button text */
             .cl-socialButtonsIconButton__text,
             .cl-socialButtonsBlockButton__text {
               color: white !important;
+              white-space: nowrap !important;
+              overflow: visible !important;
+              text-overflow: clip !important;
             }
-            
+
             /* Fix overflow issues */
-            .cl-formButtonPrimary, 
+            .cl-formButtonPrimary,
             .cl-socialButtonsBlockButton,
             .cl-formFieldInput {
               max-width: 100% !important;
               box-sizing: border-box !important;
             }
+            
+            /* Ensure social buttons text is fully visible */
+            .cl-socialButtonsBlockButton__text {
+              width: auto !important;
+              min-width: 90px !important;
+            }
+            
+            /* Make social buttons container wider */
+            .cl-socialButtonsIconButton,
+            .cl-socialButtonsBlockButton {
+              min-width: 110px !important;
+            }
+            
+            /* Make the social buttons row have proper spacing */
+            .cl-socialButtonsGroup {
+              justify-content: space-between !important;
+              gap: 12px !important;
+            }
           `}</style>
+
           <SignIn
             path="/sign-in"
             routing="path"
             appearance={{
               elements: {
                 card: `
-                  bg-transparent
-                  p-6 
+                  bg-[#0A0E24]/95
+                  backdrop-blur-md
+                  shadow-[0_10px_50px_-12px_rgba(0,0,0,0.9)]
+                  border border-[#2A2F52]
+                  p-6
                   rounded-xl
-                  overflow-hidden
-                  relative
-                  max-w-full
                 `,
                 headerTitle: `
                   text-xl
@@ -180,10 +204,10 @@ export default function SignInPage() {
                   text-white/70
                 `,
                 formFieldInput: `
-                  bg-white
-                  border border-gray-300
+                  bg-[#171B3A]
+                  border border-[#2A2F52]
                   rounded-xl
-                  text-gray-900
+                  text-white
                   placeholder:text-gray-400
                   focus:border-purple-500
                   focus:ring-purple-500/30
@@ -194,7 +218,7 @@ export default function SignInPage() {
                   w-full
                 `,
                 formFieldLabel: `
-                  text-white/80
+                  text-white/90
                   font-medium
                   mb-2
                 `,
@@ -219,15 +243,15 @@ export default function SignInPage() {
                   font-medium
                 `,
                 dividerLine: `
-                  bg-white/10
+                  bg-[#2A2F52]
                 `,
                 dividerText: `
                   text-white/50
                 `,
                 socialButtonsBlockButton: `
-                  border-white/10
-                  bg-white/10
-                  hover:bg-white/20
+                  border-[#2A2F52]
+                  bg-[#171B3A]
+                  hover:bg-[#1E234A]
                   rounded-xl
                   transition-all
                   text-white
@@ -238,34 +262,70 @@ export default function SignInPage() {
                   gap-2
                   [&>*]:text-white
                   w-full
+                  min-w-[110px]
                 `,
                 socialButtonsIconButton: `
                   text-white
                   [&>*]:text-white
+                  min-w-[110px]
                 `,
                 socialButtonsProviderIcon: `
                   filter brightness(0) invert(1)
                 `,
-                socialButtonsBlockButtonText: `
-                  text-white
+                formFieldAction: `
+                  text-purple-400
+                  hover:text-purple-300
                 `,
-                socialButtonsBlockButtonContent: `
+                formFieldErrorText: `
+                  text-red-400
+                  mt-1
+                `,
+                formResendCodeLink: `
+                  text-purple-400
+                  hover:text-purple-300
+                `,
+                identityPreviewEditButton: `
+                  text-purple-400
+                  hover:text-purple-300
+                `,
+                alternativeMethodsBlockButton: `
                   text-white
+                  bg-[#171B3A]
+                  hover:bg-[#1E234A]
+                  border border-[#2A2F52]
+                  rounded-xl
+                `,
+                socialButtonsIconRow: `
+                  justify-content-between
+                  gap-3
+                `,
+                socialButtonsBlockButtonArrow: `
+                  hidden
+                `,
+                socialButtonsBlockButtonText: `
+                  whitespace-nowrap
+                  overflow-visible
+                `,
+                socialButtonsGroup: `
+                  grid
+                  grid-cols-3 
+                  gap-3
                 `,
               },
               layout: {
-                socialButtonsVariant: "blockButton",
+                socialButtonsVariant: 'blockButton',
+                socialButtonsPlacement: 'top',
               },
               variables: {
-                colorPrimary: '#8B5CF6',
+                colorPrimary: '#7c3aed',
                 colorText: 'white',
                 colorTextSecondary: 'rgba(255, 255, 255, 0.7)',
                 colorBackground: 'transparent',
-                colorInputText: 'black',
-                colorInputBackground: 'white',
+                colorInputText: 'white',
+                colorInputBackground: '#171B3A',
                 borderRadius: '0.75rem',
-                fontFamily: 'Inter, system-ui, sans-serif'
-              }
+                fontFamily: 'Inter, system-ui, sans-serif',
+              },
             }}
           />
         </motion.div>
