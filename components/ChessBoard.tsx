@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess, Square } from 'chess.js';
+import { Chess, Square, Move } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 
 type Orientation = 'white' | 'black';
@@ -9,7 +9,7 @@ type Orientation = 'white' | 'black';
 interface ChessBoardProps {
   orientation: Orientation;
   timeControl: number; // in minutes
-  onGameEnd?: (result: "win" | "loss" | "draw") => void;
+  onGameEnd?: (result: 'win' | 'loss' | 'draw') => void;
 }
 
 function minutesToSeconds(minutes: number) {
@@ -27,35 +27,48 @@ interface MoveHistoryItem {
   lastMove: { from: string; to: string } | null;
 }
 
-export default function ChessBoard({ orientation, timeControl, onGameEnd }: ChessBoardProps) {
+export default function ChessBoard({
+  orientation,
+  timeControl,
+  onGameEnd,
+}: ChessBoardProps) {
+  // Create the chess instance once
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
 
+  // State
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
     { fen: game.fen(), lastMove: null }
   ]);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [moveCount, setMoveCount] = useState(0);
   const [displayFen, setDisplayFen] = useState(game.fen());
-  const [highlightSquares, setHighlightSquares] = useState<{ [square: string]: React.CSSProperties }>({});
+  const [highlightSquares, setHighlightSquares] = useState<{
+    [square: string]: React.CSSProperties;
+  }>({});
   const [gameMessage, setGameMessage] = useState<string | null>(null);
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
-  const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
+  const [moveSquares, setMoveSquares] = useState<{
+    [square: string]: React.CSSProperties;
+  }>({});
   const [gameEnded, setGameEnded] = useState(false);
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
+  // Clocks
   const initialTime = minutesToSeconds(timeControl);
   const [userTime, setUserTime] = useState(initialTime);
   const [aiTime, setAiTime] = useState(initialTime);
 
+  // Promotion
   const [pendingPromotion, setPendingPromotion] = useState<{
     from: Square;
     to: Square;
     color: 'w' | 'b';
   } | null>(null);
 
+  // Helpers
   const highlightLastMove = useCallback((from: string, to: string) => {
     setHighlightSquares({
       [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
@@ -63,12 +76,14 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     });
   }, []);
 
+  // Goes back exactly one move in the moveHistory
   const handleGoBack = useCallback(() => {
     if (currentPosition > 0) {
       const newPosition = currentPosition - 1;
       setCurrentPosition(newPosition);
       const historyItem = moveHistory[newPosition];
       setDisplayFen(historyItem.fen);
+
       if (historyItem.lastMove) {
         highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
       } else {
@@ -79,12 +94,14 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
+  // Goes forward exactly one move in the moveHistory
   const handleGoForward = useCallback(() => {
     if (currentPosition < moveHistory.length - 1) {
       const newPosition = currentPosition + 1;
       setCurrentPosition(newPosition);
       const historyItem = moveHistory[newPosition];
       setDisplayFen(historyItem.fen);
+
       if (historyItem.lastMove) {
         highlightLastMove(historyItem.lastMove.from, historyItem.lastMove.to);
       } else {
@@ -95,147 +112,47 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') {
-      e.preventDefault();
-      handleGoBack();
-    } else if (e.key === 'ArrowRight') {
-      e.preventDefault();
-      handleGoForward();
-    }
-  }, [handleGoBack, handleGoForward]);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
-  useEffect(() => {
-    if (userColor === 'b') {
-      makeAIMove();
-    }
-    const clockInterval = setInterval(() => {
-      if (gameMessage || game.isGameOver()) return;
-      if (currentPosition === moveHistory.length - 1) {
-        const turn = game.turn();
-        if (turn === userColor) {
-          setUserTime(prev => {
-            if (prev <= 0) {
-              setGameMessage('You ran out of time! You lose.');
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setAiTime(prev => {
-            if (prev <= 0) {
-              setGameMessage('AI ran out of time! You win.');
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleGoBack();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleGoForward();
       }
-    }, 1000);
-    return () => clearInterval(clockInterval);
-  }, [gameMessage, currentPosition, moveHistory.length, userColor]);
+    },
+    [handleGoBack, handleGoForward]
+  );
 
+  // Are we at the "live" position?
   const isAtLivePosition = currentPosition === moveHistory.length - 1;
 
-  function recordMove(move: any) {
+  // Record a move in the history (each half-move)
+  function recordMove(move: Move) {
     const newFen = game.fen();
     const newHistoryItem: MoveHistoryItem = {
       fen: newFen,
-      lastMove: { from: move.from, to: move.to }
+      lastMove: { from: move.from, to: move.to },
     };
-    setMoveHistory(prevHistory => {
-      const newHistory =
-        isAtLivePosition
-          ? [...prevHistory, newHistoryItem]
-          : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
+
+    setMoveHistory((prevHistory) => {
+      // If at live position, just push
+      // Otherwise, truncate and then push
+      const newHistory = isAtLivePosition
+        ? [...prevHistory, newHistoryItem]
+        : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
+
       setCurrentPosition(newHistory.length - 1);
       setDisplayFen(newFen);
       highlightLastMove(move.from, move.to);
       return newHistory;
     });
-    setMoveCount(prevCount => prevCount + 1);
+
+    setMoveCount((prevCount) => prevCount + 1);
   }
 
-  function userMove(from: string, to: string, promotion?: string): boolean {
-    if (!isAtLivePosition) {
-      const liveFen = moveHistory[moveHistory.length - 1].fen;
-      game.load(liveFen);
-      setDisplayFen(liveFen);
-      setCurrentPosition(moveHistory.length - 1);
-    }
-    const move = game.move({ from: from as Square, to: to as Square, promotion });
-    if (!move) return false;
-    recordMove(move);
-    checkGameStatus();
-    setSelectedSquare(null);
-    setMoveSquares({});
-    if (!game.isGameOver() && game.turn() === aiColor) {
-      // AI now moves after 1.5 seconds (1500ms)
-      setTimeout(makeAIMove, 1500);
-    }
-    return true;
-  }
-
-  function tryMove(from: string, to: string) {
-    const piece = game.get(from as Square);
-    if (
-      piece?.type === 'p' &&
-      ((piece.color === 'w' && to.endsWith('8')) ||
-       (piece.color === 'b' && to.endsWith('1')))
-    ) {
-      setPendingPromotion({ from: from as Square, to: to as Square, color: piece.color });
-      return false;
-    }
-    return userMove(from, to);
-  }
-
-  const onDrop = (sourceSquare: string, targetSquare: string) => {
-    if (game.turn() !== userColor) return false;
-    return tryMove(sourceSquare, targetSquare);
-  };
-
-  function onSquareClick(square: string) {
-    if (!isAtLivePosition || game.turn() !== userColor) return;
-    if (selectedSquare && square !== selectedSquare && moveSquares[square]) {
-      tryMove(selectedSquare, square);
-      return;
-    }
-    if (selectedSquare === square) {
-      setSelectedSquare(null);
-      setMoveSquares({});
-      return;
-    }
-    const piece = game.get(square as Square);
-    if (piece && piece.color === userColor) {
-      const moves = game.moves({ square: square as Square, verbose: true });
-      const newSquares: { [sq: string]: React.CSSProperties } = {};
-      moves.forEach((m: any) => {
-        newSquares[m.to] = { backgroundColor: 'rgba(0, 255, 0, 0.4)' };
-      });
-      newSquares[square] = { backgroundColor: 'rgba(255, 255, 0, 0.6)' };
-      setSelectedSquare(square);
-      setMoveSquares(newSquares);
-    } else {
-      setSelectedSquare(null);
-      setMoveSquares({});
-    }
-  }
-
-  function makeAIMove() {
-    const moves = game.moves({ verbose: true });
-    if (moves.length === 0 || game.isGameOver()) return;
-    const randomIndex = Math.floor(Math.random() * moves.length);
-    const aiMove = moves[randomIndex];
-    game.move(aiMove);
-    recordMove(aiMove);
-    checkGameStatus();
-  }
-
+  // Check for checkmate, draw, etc.
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
@@ -257,6 +174,96 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     }
   }
 
+  // The AI picks a random move after 1.5s
+  function makeAIMove() {
+    const moves = game.moves({ verbose: true }) as Move[];
+    if (moves.length === 0 || game.isGameOver()) return;
+    const randomIndex = Math.floor(Math.random() * moves.length);
+    const aiMove = moves[randomIndex];
+    game.move(aiMove);
+    recordMove(aiMove);
+    checkGameStatus();
+  }
+
+  // Make a user move
+  function userMove(from: string, to: string, promotion?: string): boolean {
+    if (!isAtLivePosition) {
+      // Load the live position
+      const liveFen = moveHistory[moveHistory.length - 1].fen;
+      game.load(liveFen);
+      setDisplayFen(liveFen);
+      setCurrentPosition(moveHistory.length - 1);
+    }
+
+    const move = game.move({
+      from: from as Square,
+      to: to as Square,
+      promotion,
+    }) as Move | null;
+    if (!move) return false;
+
+    recordMove(move);
+    checkGameStatus();
+    setSelectedSquare(null);
+    setMoveSquares({});
+
+    // AI move if it's AI's turn
+    if (!game.isGameOver() && game.turn() === aiColor) {
+      setTimeout(makeAIMove, 1500); // 1.5 seconds delay
+    }
+    return true;
+  }
+
+  // Check if we need to promote
+  function tryMove(from: string, to: string) {
+    const piece = game.get(from as Square);
+    if (
+      piece?.type === 'p' &&
+      ((piece.color === 'w' && to.endsWith('8')) ||
+        (piece.color === 'b' && to.endsWith('1')))
+    ) {
+      setPendingPromotion({ from: from as Square, to: to as Square, color: piece.color });
+      return false;
+    }
+    return userMove(from, to);
+  }
+
+  // Chessboard callbacks
+  function onDrop(sourceSquare: string, targetSquare: string) {
+    if (game.turn() !== userColor) return false;
+    return tryMove(sourceSquare, targetSquare);
+  }
+
+  function onSquareClick(square: string) {
+    if (!isAtLivePosition || game.turn() !== userColor) return;
+    if (selectedSquare && square !== selectedSquare && moveSquares[square]) {
+      tryMove(selectedSquare, square);
+      return;
+    }
+    if (selectedSquare === square) {
+      setSelectedSquare(null);
+      setMoveSquares({});
+      return;
+    }
+    const piece = game.get(square as Square);
+    if (piece && piece.color === userColor) {
+      // Show possible moves
+      const moves = game.moves({ square: square as Square, verbose: true }) as Move[];
+      const newSquares: { [sq: string]: React.CSSProperties } = {};
+
+      moves.forEach((m) => {
+        newSquares[m.to] = { backgroundColor: 'rgba(0, 255, 0, 0.4)' };
+      });
+      newSquares[square] = { backgroundColor: 'rgba(255, 255, 0, 0.6)' };
+      setSelectedSquare(square);
+      setMoveSquares(newSquares);
+    } else {
+      setSelectedSquare(null);
+      setMoveSquares({});
+    }
+  }
+
+  // Handle promotion
   function handlePromotionChoice(piece: 'q' | 'r' | 'b' | 'n') {
     if (!pendingPromotion) return;
     const { from, to } = pendingPromotion;
@@ -268,14 +275,59 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
     setPendingPromotion(null);
   }
 
+  // Keydown listener for arrow keys
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  // Clock effect + optional AI move if user is black
+  useEffect(() => {
+    if (userColor === 'b') {
+      makeAIMove();
+    }
+    const clockInterval = setInterval(() => {
+      if (gameMessage || game.isGameOver()) return;
+      if (currentPosition === moveHistory.length - 1) {
+        const turn = game.turn();
+        if (turn === userColor) {
+          setUserTime((prev) => {
+            if (prev <= 0) {
+              setGameMessage('You ran out of time! You lose.');
+              return 0;
+            }
+            return prev - 1;
+          });
+        } else {
+          setAiTime((prev) => {
+            if (prev <= 0) {
+              setGameMessage('AI ran out of time! You win.');
+              return 0;
+            }
+            return prev - 1;
+          });
+        }
+      }
+    }, 1000);
+
+    return () => clearInterval(clockInterval);
+  }, [
+    userColor,
+    gameMessage,
+    currentPosition,
+    moveHistory.length,
+    game,
+    makeAIMove,
+  ]);
+
+  // Clocks + Move Display
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
-  const combinedSquareStyles = { ...highlightSquares, ...moveSquares };
-
   const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
 
   return (
     <div className="relative">
+      {/* Move navigation */}
       <div className="flex items-center space-x-4 mb-2">
         <button
           onClick={handleGoBack}
@@ -299,6 +351,7 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
         )}
       </div>
 
+      {/* Clocks */}
       <div className="flex justify-between items-center mb-2 text-white text-lg">
         {orientation === 'white' ? (
           <>
@@ -313,16 +366,21 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
         )}
       </div>
 
+      {/* The chessboard */}
       <Chessboard
         position={displayFen}
         onPieceDrop={onDrop}
         onSquareClick={onSquareClick}
         boardWidth={400}
         boardOrientation={orientation}
-        customSquareStyles={combinedSquareStyles}
+        customSquareStyles={{
+          ...highlightSquares,
+          ...moveSquares,
+        }}
         customBoardStyle={{ background: 'transparent', boxShadow: 'none' }}
       />
 
+      {/* Promotion overlay */}
       {pendingPromotion && (
         <PromotionOverlay
           color={pendingPromotion.color}
@@ -331,6 +389,7 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
         />
       )}
 
+      {/* Game message (checkmate/draw) */}
       {gameMessage && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
           <h1 className="text-white text-2xl font-bold text-center p-4">
@@ -348,7 +407,7 @@ export default function ChessBoard({ orientation, timeControl, onGameEnd }: Ches
 function PromotionOverlay({
   color,
   onSelect,
-  onCancel
+  onCancel,
 }: {
   color: 'w' | 'b';
   onSelect: (piece: 'q' | 'r' | 'b' | 'n') => void;
@@ -356,7 +415,7 @@ function PromotionOverlay({
 }) {
   const pieceMap = {
     w: { q: '\u2655', r: '\u2656', b: '\u2657', n: '\u2658' },
-    b: { q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E' }
+    b: { q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E' },
   };
   const promotions: Array<'q' | 'r' | 'b' | 'n'> = ['q', 'r', 'b', 'n'];
 

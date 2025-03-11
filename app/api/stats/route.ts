@@ -9,7 +9,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const key = `user:${user.id}:stats`;
-  let statsStr = await redis.get(key);
+  const statsStr = await redis.get(key);
   let stats;
   if (!statsStr) {
     stats = { played: 0, wins: 0, losses: 0, draws: 0, elo: 500 };
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   }
   const key = `user:${user.id}:stats`;
   const { result } = await request.json();
-  let statsStr = await redis.get(key);
+  const statsStr = await redis.get(key);
   let stats;
   if (!statsStr) {
     stats = { played: 0, wins: 0, losses: 0, draws: 0, elo: 500 };

@@ -131,7 +131,7 @@ export default function Home() {
                 </Link>
                 {/* LOG OUT BUTTON */}
                 <button
-                  onClick={signOut}
+                  onClick={() => signOut()}
                   className="px-6 py-3 bg-white text-blue-900 font-semibold rounded-md 
                              transition shadow-sm transform 
                              hover:scale-105 hover:-translate-y-0.5 hover:bg-gray-200 

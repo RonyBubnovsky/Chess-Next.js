@@ -1,16 +1,26 @@
+// app/api/leaderboard/route.ts
 import { NextResponse } from 'next/server';
 import { clerkClient } from '@clerk/nextjs/server';
 import redis from '../../../lib/redis';
 
 export async function GET() {
+  // 1. Check if we have a cached leaderboard
+  const cachedLeaderboard = await redis.get('leaderboard:top10');
+  if (cachedLeaderboard) {
+    // If cached, return immediately
+    const parsed = JSON.parse(cachedLeaderboard);
+    return NextResponse.json(parsed);
+  }
+
+  // 2. If no cache, build the leaderboard
   const clerk = await clerkClient();
   const leaderboard: Array<{ username: string; elo: number }> = [];
 
-  // treat cursor as a number in v4, starting at 0
+  // treat cursor as a number in node-redis v4
   let cursor = 0;
 
   do {
-    // node-redis v4 returns an object: { cursor, keys }
+    // SCAN in batches of 100 keys matching "user:*:stats"
     const { cursor: newCursor, keys: foundKeys } = await redis.scan(cursor, {
       MATCH: 'user:*:stats',
       COUNT: 100,
@@ -18,6 +28,7 @@ export async function GET() {
     cursor = newCursor;
 
     if (foundKeys.length > 0) {
+      // Pipeline to fetch all key values in one go
       const pipeline = redis.multi();
       for (const key of foundKeys) {
         pipeline.get(key);
@@ -74,6 +85,11 @@ export async function GET() {
       ...entry,
       rank,
     };
+  });
+
+  // 3. Store the leaderboard in Redis for 60s to avoid recalculating
+  await redis.set('leaderboard:top10', JSON.stringify(ranked), {
+    EX: 15, // TTL in seconds
   });
 
   return NextResponse.json(ranked);
