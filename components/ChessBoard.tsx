@@ -28,11 +28,11 @@ export default function ChessBoard({
   // Create the chess instance once
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
-  
+
   // Reference to the chessboard container
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  // State initialization
+  // State
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
     { fen: game.fen(), lastMove: null },
   ]);
@@ -55,9 +55,15 @@ export default function ChessBoard({
   const [aiTime, setAiTime] = useState(initialTime);
 
   // Promotion
-  const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
+  const [pendingPromotion, setPendingPromotion] = useState<{
+    from: Square;
+    to: Square;
+    color: 'w' | 'b';
+  } | null>(null);
 
-  // Helpers
+  const isAtLivePosition = currentPosition === moveHistory.length - 1;
+
+  // --- Helpers ---
   const highlightLastMove = useCallback((from: string, to: string) => {
     setHighlightSquares({
       [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
@@ -97,8 +103,8 @@ export default function ChessBoard({
     }
   }, [currentPosition, moveHistory, highlightLastMove]);
 
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
         handleGoBack();
@@ -106,11 +112,10 @@ export default function ChessBoard({
         e.preventDefault();
         handleGoForward();
       }
-    },
-    [handleGoBack, handleGoForward]
-  );
-
-  const isAtLivePosition = currentPosition === moveHistory.length - 1;
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleGoBack, handleGoForward]);
 
   function recordMove(move: Move) {
     const newFen = game.fen();
@@ -136,7 +141,11 @@ export default function ChessBoard({
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
-      setGameMessage(result === 'win' ? 'Checkmate! You win. You gained +50 ELO.' : 'Checkmate! You lose. You lost -50 ELO.');
+      setGameMessage(
+        result === 'win'
+          ? 'Checkmate! You win. You gained +50 ELO.'
+          : 'Checkmate! You lose. You lost -50 ELO.'
+      );
       if (!gameEnded && onGameEnd) {
         onGameEnd(result);
         setGameEnded(true);
@@ -152,10 +161,10 @@ export default function ChessBoard({
 
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
-    
+
     let result: 'win' | 'loss' | 'draw';
     let message: string;
-    
+
     if (timeoutColor === userColor) {
       result = 'loss';
       message = 'You ran out of time! You lose. You lost -50 ELO.';
@@ -163,9 +172,9 @@ export default function ChessBoard({
       result = 'win';
       message = 'AI ran out of time! You win. You gained +50 ELO.';
     }
-    
+
     setGameMessage(message);
-    
+
     if (onGameEnd) {
       onGameEnd(result);
       setGameEnded(true);
@@ -196,9 +205,10 @@ export default function ChessBoard({
     setSelectedSquare(null);
     setMoveSquares({});
 
+    // Slight delay for AI
     setTimeout(() => {
       makeAIMove();
-    }, 1500);
+    }, 1000);
 
     return true;
   }
@@ -258,52 +268,17 @@ export default function ChessBoard({
     setPendingPromotion(null);
   }
 
-  // Fix piece dragging issues
-  useEffect(() => {
-    function fixDraggedPieceStyles() {
-      const boardEl = boardContainerRef.current;
-      if (!boardEl) return;
-      
-      // Set up a MutationObserver to detect when the piece-ghost element is added
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList') {
-            const dragGhost = boardEl.querySelector('.piece-ghost');
-            if (dragGhost) {
-              // Fix the position of the ghost piece
-              (dragGhost as HTMLElement).style.position = 'absolute';
-              (dragGhost as HTMLElement).style.pointerEvents = 'none';
-              (dragGhost as HTMLElement).style.zIndex = '1000';
-              (dragGhost as HTMLElement).style.transform = 'translate(-50%, -50%)';
-            }
-          }
-        });
-      });
-      
-      // Start observing
-      observer.observe(boardEl, { childList: true, subtree: true });
-      
-      // Return cleanup function
-      return () => observer.disconnect();
-    }
-    
-    fixDraggedPieceStyles();
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
-
+  // Start AI move if orientation is black and user hasn't moved yet
   useEffect(() => {
     if (!gameStarted && orientation === 'black') {
       setGameStarted(true);
       setTimeout(() => {
         makeAIMove();
-      }, 1500);
+      }, 1000);
     }
   }, [orientation, gameStarted]);
 
+  // Clocks
   useEffect(() => {
     const clockInterval = setInterval(() => {
       if (gameEnded || game.isGameOver()) return;
@@ -330,7 +305,14 @@ export default function ChessBoard({
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game]);
+  }, [
+    userColor,
+    aiColor,
+    gameEnded,
+    currentPosition,
+    moveHistory.length,
+    game,
+  ]);
 
   const userClock = formatTime(userTime);
   const aiClock = formatTime(aiTime);
@@ -377,10 +359,10 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* Chessboard - Using a custom wrapper div for better positioning context */}
-      <div 
+      {/* Chessboard */}
+      <div
         ref={boardContainerRef}
-        className="chess-container relative" 
+        className="chess-container relative"
         style={{ width: '400px', height: '400px' }}
       >
         <Chessboard
@@ -393,11 +375,7 @@ export default function ChessBoard({
             ...highlightSquares,
             ...moveSquares,
           }}
-          customBoardStyle={{ 
-            background: 'transparent', 
-            boxShadow: 'none'
-          }}
-          // Reduce the animation duration to make piece movement feel more responsive
+          arePiecesDraggable={false}
           animationDuration={200}
         />
       </div>
@@ -420,37 +398,17 @@ export default function ChessBoard({
         </div>
       )}
 
-      {/* Global styles to fix drag issues */}
+      {/* Remove custom piece ghost styling that conflicts with react-chessboard */}
       <style jsx global>{`
-        /* Ensure the board has the right positioning context */
         .chess-container {
           position: relative;
           overflow: visible;
         }
-        
-        /* Fix the board's structure */
         .chess-container > div {
           position: relative;
           width: 100%;
           height: 100%;
         }
-        
-        /* Make sure pieces are positioned correctly */
-        .piece {
-          transform-origin: center;
-          will-change: transform;
-        }
-        
-        /* Fix the dragging pieces */
-        .piece-ghost {
-          position: absolute !important;
-          pointer-events: none !important;
-          z-index: 1000 !important;
-          transform: translate(-50%, -50%) !important;
-          opacity: 0.8 !important;
-        }
-        
-        /* Make sure squares are properly sized */
         .square {
           position: relative !important;
         }
