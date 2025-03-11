@@ -87,7 +87,7 @@ export async function GET() {
     };
   });
 
-  // 3. Store the leaderboard in Redis for 60s to avoid recalculating
+  // 3. Store the leaderboard in Redis for 15s to avoid recalculating
   await redis.set('leaderboard:top10', JSON.stringify(ranked), {
     EX: 15, // TTL in seconds
   });

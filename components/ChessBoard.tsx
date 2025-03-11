@@ -38,7 +38,7 @@ export default function ChessBoard({
 
   // State
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
-    { fen: game.fen(), lastMove: null }
+    { fen: game.fen(), lastMove: null },
   ]);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [moveCount, setMoveCount] = useState(0);
@@ -52,6 +52,7 @@ export default function ChessBoard({
     [square: string]: React.CSSProperties;
   }>({});
   const [gameEnded, setGameEnded] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
@@ -174,8 +175,11 @@ export default function ChessBoard({
     }
   }
 
-  // The AI picks a random move after 1.5s
+  // The AI picks a random move (only if it's actually AI's turn)
   function makeAIMove() {
+    // Ensure it's the AI's turn
+    if (game.turn() !== aiColor) return;
+
     const moves = game.moves({ verbose: true }) as Move[];
     if (moves.length === 0 || game.isGameOver()) return;
     const randomIndex = Math.floor(Math.random() * moves.length);
@@ -208,9 +212,10 @@ export default function ChessBoard({
     setMoveSquares({});
 
     // AI move if it's AI's turn
-    if (!game.isGameOver() && game.turn() === aiColor) {
-      setTimeout(makeAIMove, 1500); // 1.5 seconds delay
-    }
+    setTimeout(() => {
+      makeAIMove();
+    }, 1500);
+
     return true;
   }
 
@@ -281,13 +286,23 @@ export default function ChessBoard({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  // Clock effect + optional AI move if user is black
+  // Make AI's first move if player is black
   useEffect(() => {
-    if (userColor === 'b') {
-      makeAIMove();
+    // Only run this effect once when the component mounts
+    if (!gameStarted && orientation === 'black') {
+      setGameStarted(true);
+      // Add a small delay to make it feel more natural
+      setTimeout(() => {
+        makeAIMove();
+      }, 1500);
     }
+  }, [orientation, gameStarted]);
+
+  // Clock effect
+  useEffect(() => {
     const clockInterval = setInterval(() => {
       if (gameMessage || game.isGameOver()) return;
+      // Only tick the clock if we're at the live position
       if (currentPosition === moveHistory.length - 1) {
         const turn = game.turn();
         if (turn === userColor) {
@@ -311,14 +326,7 @@ export default function ChessBoard({
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, [
-    userColor,
-    gameMessage,
-    currentPosition,
-    moveHistory.length,
-    game,
-    makeAIMove,
-  ]);
+  }, [userColor, gameMessage, currentPosition, moveHistory.length, game]);
 
   // Clocks + Move Display
   const userClock = formatTime(userTime);
