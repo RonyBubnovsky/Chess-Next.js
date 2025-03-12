@@ -332,6 +332,7 @@ useEffect(() => {
                           setLoadingButton("signOut");
                           await signOut();
                           toast.success("Sign out successful", { duration: 1500 });
+                          localStorage.removeItem("hasLoggedIn");
                           setLoadingButton(null);
                         }}
                         whileHover={{ scale: 1.05 }}
