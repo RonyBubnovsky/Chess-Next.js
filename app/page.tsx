@@ -81,14 +81,12 @@ const Home: React.FC = () => {
       }
     }
     
-    // When user logs out, clear the flag (put this in your logout handler)
-    // localStorage.removeItem("hasLoggedIn");
   }, [isLoaded, isSignedIn]);
 
-// When user signs out, we'll clear the login timestamp
+// When user signs out
 useEffect(() => {
   if (isLoaded && !isSignedIn) {
-    localStorage.removeItem("lastLoginTime");
+    localStorage.removeItem("hasLoggedIn");
   }
 }, [isLoaded, isSignedIn]);
 
