@@ -187,7 +187,7 @@ export default function SignInPage() {
               gap: 8px !important;
             }
 
-            /* NEW STYLES - Make borders more visible for social buttons */
+            /* Make borders more visible for social buttons */
             .cl-socialButtonsBlockButton {
               border: 2px solid #3A4074 !important;
               box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
@@ -235,7 +235,7 @@ export default function SignInPage() {
               transform: scale(1.2) !important;
             }
 
-            /* NEW STYLES - Make the form field input border more visible */
+            /* Make the form field input border more visible */
             .cl-formFieldInput {
               border: 2px solid #3A4074 !important;
               box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
@@ -254,7 +254,7 @@ export default function SignInPage() {
               transform: translateY(-1px) !important;
             }
             
-            /* NEW STYLES - Fix button text wrapping issue */
+            /* Fix button text wrapping issue */
             .cl-socialButtonsBlockButton[data-provider='facebook'] .cl-socialButtonsBlockButton__text,
             .cl-socialButtonsBlockButton[data-provider='github'] .cl-socialButtonsBlockButton__text,
             .cl-socialButtonsBlockButton[data-provider='google'] .cl-socialButtonsBlockButton__text {
