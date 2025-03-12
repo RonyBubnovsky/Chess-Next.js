@@ -212,7 +212,7 @@ export default function ChessBoard({
 
   function makeAIMove() {
     if (game.turn() !== aiColor || game.isGameOver()) return;
-    const bestMove = findBestMove(game, 3, aiColor);
+    const bestMove = findBestMove(game, aiColor, 3);
     if (!bestMove) return;
     game.move(bestMove);
     recordMove(bestMove);
