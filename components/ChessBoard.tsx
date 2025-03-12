@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess, Square, Move, Piece } from 'chess.js';
+import { Chess, Square, Move} from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import PromotionOverlay from './PromotionOverlay';
 import MaterialTracker from './MaterialTracker';
@@ -294,11 +294,6 @@ export default function ChessBoard({
 
   function handleCancelPromotion() {
     setPendingPromotion(null);
-  }
-
-  function resetMaterial() {
-    setCapturedByUser([]);
-    setCapturedByAI([]);
   }
 
   useEffect(() => {

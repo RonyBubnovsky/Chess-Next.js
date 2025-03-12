@@ -1,4 +1,4 @@
-import { Chess, Move, Square } from 'chess.js';
+import { Chess, Move } from 'chess.js';
 
 // Piece-Square Tables: These give position-dependent values to pieces
 // Pawns are encouraged to advance and control the center
@@ -172,11 +172,11 @@ function isEndgame(gameInstance: Chess): boolean {
 }
 
 // Add randomness to make the engine less predictable
-function addRandomness(evaluation: number, depth: number): number {
-  // Add more randomness at higher depths (opening and early game)
-  const randomFactor = depth > 3 ? 10 : 5;
-  return evaluation + (Math.random() * randomFactor - randomFactor / 2);
-}
+// function addRandomness(evaluation: number, depth: number): number {
+//   // Add more randomness at higher depths (opening and early game)
+//   const randomFactor = depth > 3 ? 10 : 5;
+//   return evaluation + (Math.random() * randomFactor - randomFactor / 2);
+// }
 
 // Helper function to convert moves to algebraic notation
 function moveToAlgebraic(gameInstance: Chess, move: Move): string {
@@ -221,7 +221,7 @@ function checkOpeningBook(gameInstance: Chess): Move | null {
               }
             }
             return null;
-          } catch (e) {
+          } catch {
             return null;
           }
         }
@@ -427,7 +427,7 @@ export function minimax(gameInstance: Chess, depth: number, alpha: number, beta:
     let maxEval = -Infinity;
     for (const move of moves) {
       gameInstance.move(move);
-      const [evalScore, _] = minimax(gameInstance, depth - 1, alpha, beta, false, aiColor);
+      const [evalScore] = minimax(gameInstance, depth - 1, alpha, beta, false, aiColor);
       gameInstance.undo();
       
       if (evalScore > maxEval) {
@@ -446,7 +446,7 @@ export function minimax(gameInstance: Chess, depth: number, alpha: number, beta:
     let minEval = Infinity;
     for (const move of moves) {
       gameInstance.move(move);
-      const [evalScore, _] = minimax(gameInstance, depth - 1, alpha, beta, true, aiColor);
+      const [evalScore] = minimax(gameInstance, depth - 1, alpha, beta, true, aiColor);
       gameInstance.undo();
       
       if (evalScore < minEval) {
@@ -470,7 +470,7 @@ export function findBestMove(gameInstance: Chess, aiColor: string, maxDepth = 3)
   
   // Iterative deepening
   for (let depth = 1; depth <= maxDepth; depth++) {
-    const [_, move] = minimax(
+    const [, move] = minimax(
       gameInstance,
       depth,
       -Infinity,
