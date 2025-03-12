@@ -65,6 +65,26 @@ const Home: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Display a success toast once the user is signed in
+  // Since Clerk handles session persistence but React state resets on refresh,
+  // we use sessionStorage to ensure the "logged in" toast is shown only once per session.
+  useEffect(() => {
+    if (isSignedIn && !sessionStorage.getItem("loggedInToastShown")) {
+      toast.success("Logged in successfully");
+      sessionStorage.setItem("loggedInToastShown", "true");
+    }
+  }, [isSignedIn]);
+
+  // Clear the 'loggedInToastShown' flag when the user signs out,
+  // so that on the next sign in the toast can be shown again.
+  useEffect(() => {
+    if (!isSignedIn) {
+      sessionStorage.removeItem("loggedInToastShown");
+    }
+  }, [isSignedIn]);
+
+
+  
   // Generate ambient particles only when the component is mounted.
   const particles = useMemo(() => {
     if (!isMounted) return [];
@@ -86,12 +106,49 @@ const Home: React.FC = () => {
   // Toggle the theme between dark and light mode.
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
-  // Delete account functionality
   const handleDeleteAccount = async () => {
-    // Confirm deletion with the user
-    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
-      return;
-    }
+    // Show a custom confirmation modal using react-hot-toast's custom toast
+    const shouldDelete = await new Promise<boolean>((resolve) => {
+      toast.custom(
+        (t) => (
+          <div className="fixed inset-0 flex items-center justify-center z-50">
+            {/* Semi-transparent overlay */}
+            <div className="absolute inset-0 bg-black opacity-50"></div>
+            {/* Modal container with extra top margin to bring it down */}
+            <div className="relative bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl max-w-md mx-auto mt-35">
+              <p className="mb-6 text-lg font-semibold text-gray-900 dark:text-gray-100 text-center">
+                Are you sure you want to delete your account? This action cannot be undone.
+              </p>
+              <div className="flex justify-center space-x-4">
+                <button
+                  className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                  onClick={() => {
+                    toast.remove(t.id);
+                    resolve(true);
+                  }}
+                >
+                  Yes, delete it
+                </button>
+                <button
+                  className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+                  onClick={() => {
+                    toast.remove(t.id);
+                    resolve(false);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ),
+        { duration: Infinity }
+      );
+    });
+  
+    // If the user cancels, do nothing
+    if (!shouldDelete) return;
+  
     setLoadingButton("deleteAccount");
     try {
       // Call the API route to delete the account.
@@ -99,6 +156,8 @@ const Home: React.FC = () => {
       if (!response.ok) {
         throw new Error("Failed to delete account");
       }
+      // Show a success toast after the account is deleted.
+      toast.success("Account deleted successfully");
       // After deleting the account, sign out the user.
       await signOut();
     } catch (error: unknown) {
@@ -112,9 +171,9 @@ const Home: React.FC = () => {
     } finally {
       // Reset loading state regardless of outcome.
       setLoadingButton(null);
-    }    
+    }
   };
-
+  
   // Prevent rendering until client-side hydration is complete.
   if (!isMounted) {
     return <div className="min-h-screen bg-gray-50"></div>;
@@ -281,11 +340,8 @@ const Home: React.FC = () => {
                         onClick={handleDeleteAccount}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium transition ${
-                          isDarkMode 
-                            ? 'bg-red-600 text-white border border-red-700'
-                            : 'bg-red-500 text-white border border-red-600 shadow-md'
-                        }`}
+                        className={`flex items-center justify-center px-8 py-4 rounded-xl font-semibold transition duration-300 focus:outline-none focus:ring-2 focus:ring-red-300
+                          ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-700 shadow-lg' : 'bg-gradient-to-r from-red-500 to-red-600 shadow-md'}`}
                         disabled={loadingButton === "deleteAccount"}
                       >
                         {loadingButton === "deleteAccount" ? <LoadingSVG /> : "Delete Account"}
