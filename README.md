@@ -151,7 +151,7 @@ The AI evaluates board positions based on:
 - Pawn structure
 - King safety
 
-## This implementation provides a challenging opponent while maintaining reasonable performance for a web application.
+This implementation provides a challenging opponent while maintaining reasonable performance for a web application.
 
 ## License
 
