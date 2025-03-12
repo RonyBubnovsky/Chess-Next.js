@@ -234,11 +234,7 @@ function checkOpeningBook(gameInstance: Chess): Move | null {
 
 // Improved evaluation function
 export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
-  // Game status checks
-  if (gameInstance.isCheckmate()) {
-    return gameInstance.turn() === aiColor ? -100000 : 100000;
-  }
-  
+  // Handle draws and stalemates explicitly
   if (gameInstance.isDraw() || gameInstance.isStalemate() || gameInstance.isThreefoldRepetition()) {
     return 0; // Draws are neutral
   }
@@ -385,7 +381,6 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
   
   // Apply randomness to the evaluation.
   // Here we use a depth-based randomness factor.
-  // You can adjust the depth value as needed.
   evaluation = addRandomness(evaluation, isEndgame(gameInstance) ? 4 : 2);
   
   return evaluation;
@@ -400,11 +395,17 @@ export function minimax(
   maximizingPlayer: boolean,
   aiColor: string
 ): [number, Move | null] {
+  // Base case: if depth is zero or game over, handle terminal cases
   if (depth === 0 || gameInstance.isGameOver()) {
+    if (gameInstance.isCheckmate()) {
+      // When in checkmate, the side whose turn it is has no moves.
+      // Return a mate score adjusted by depth so that a faster mate is preferred.
+      return [gameInstance.turn() === aiColor ? -100000 + depth : 100000 - depth, null];
+    }
     return [evaluateBoard(gameInstance, aiColor), null];
   }
   
-  // Check opening book
+  // Check opening book if deep enough in the tree
   if (depth >= 3) {
     const bookMove = checkOpeningBook(gameInstance);
     if (bookMove) {
@@ -413,6 +414,7 @@ export function minimax(
   }
   
   const moves = gameInstance.moves({ verbose: true }) as Move[];
+  // Move ordering: prefer moves that capture higher value pieces
   moves.sort((a, b) => {
     const aScore = a.captured ? PIECE_VALUES[a.captured] : 0;
     const bScore = b.captured ? PIECE_VALUES[b.captured] : 0;
