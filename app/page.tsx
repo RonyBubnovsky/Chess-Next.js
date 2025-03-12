@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -42,13 +42,13 @@ const LoadingSVG: React.FC = () => (
  * call-to-action buttons with loading states, and a 3D chess visualization.
  */
 const Home: React.FC = () => {
-  const { isSignedIn, user } = useUser();
+  const { isSignedIn, user, isLoaded } = useUser();
   const { signOut } = useAuth();
   
   // State to toggle dark/light mode
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
   // State to simulate content load
-  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [isLoaded1, setIsLoaded1] = useState<boolean>(false);
   // State to prevent mismatch during client-side hydration
   const [isMounted, setIsMounted] = useState<boolean>(false);
   // State for which button is currently in loading state. Accepts string identifiers or null.
@@ -61,27 +61,36 @@ const Home: React.FC = () => {
   useEffect(() => {
     setIsMounted(true);
     setIsDarkMode(window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const timer = setTimeout(() => setIsLoaded(true), 400);
+    const timer = setTimeout(() => setIsLoaded1(true), 400);
     return () => clearTimeout(timer);
   }, []);
 
-  // Display a success toast once the user is signed in
-  // Since Clerk handles session persistence but React state resets on refresh,
-  // we use sessionStorage to ensure the "logged in" toast is shown only once per session.
-  useEffect(() => {
-    if (isSignedIn && !sessionStorage.getItem("loggedInToastShown")) {
-      toast.success("Logged in successfully");
-      sessionStorage.setItem("loggedInToastShown", "true");
-    }
-  }, [isSignedIn]);
 
-  // Clear the 'loggedInToastShown' flag when the user signs out,
-  // so that on the next sign in the toast can be shown again.
+
   useEffect(() => {
-    if (!isSignedIn) {
-      sessionStorage.removeItem("loggedInToastShown");
+    // Wait for Clerk to finish loading
+    if (isLoaded && isSignedIn) {
+      // Check if this is the first login in this browser session
+      const hasLoggedInBefore = localStorage.getItem("hasLoggedIn");
+      
+      if (!hasLoggedInBefore) {
+        // First login in this browser session
+        toast.success("Logged in successfully", { duration: 1500 });
+        // Mark that user has logged in
+        localStorage.setItem("hasLoggedIn", "true");
+      }
     }
-  }, [isSignedIn]);
+    
+    // When user logs out, clear the flag (put this in your logout handler)
+    // localStorage.removeItem("hasLoggedIn");
+  }, [isLoaded, isSignedIn]);
+
+// When user signs out, we'll clear the login timestamp
+useEffect(() => {
+  if (isLoaded && !isSignedIn) {
+    localStorage.removeItem("lastLoginTime");
+  }
+}, [isLoaded, isSignedIn]);
 
 
   
@@ -249,7 +258,7 @@ const Home: React.FC = () => {
 
       {/* Main content container */}
       <AnimatePresence>
-        {isLoaded && (
+        {isLoaded1 && (
           <motion.div 
             className="flex flex-col lg:flex-row h-screen"
             initial={{ opacity: 0 }}
