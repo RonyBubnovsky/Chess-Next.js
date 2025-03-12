@@ -1,13 +1,21 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess, Square, Move } from 'chess.js';
+import { Chess, Square, Move, Piece } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import PromotionOverlay from './PromotionOverlay';
+import MaterialTracker from './MaterialTracker';
 import { minutesToSeconds, formatTime } from '../lib/utils';
 import { findBestMove } from '../lib/chessEngine';
 
 type Orientation = 'white' | 'black';
+type PieceType = 'p' | 'n' | 'b' | 'r' | 'q';
+type PieceColor = 'w' | 'b';
+
+interface CapturedPiece {
+  type: PieceType;
+  color: PieceColor;
+}
 
 interface ChessBoardProps {
   orientation: Orientation;
@@ -18,6 +26,7 @@ interface ChessBoardProps {
 interface MoveHistoryItem {
   fen: string;
   lastMove: { from: string; to: string } | null;
+  capturedPiece: CapturedPiece | null;
 }
 
 export default function ChessBoard({
@@ -34,7 +43,7 @@ export default function ChessBoard({
 
   // State initialization
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
-    { fen: game.fen(), lastMove: null },
+    { fen: game.fen(), lastMove: null, capturedPiece: null },
   ]);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [moveCount, setMoveCount] = useState(0);
@@ -45,6 +54,10 @@ export default function ChessBoard({
   const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
   const [gameEnded, setGameEnded] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
+
+  // Material tracking
+  const [capturedByUser, setCapturedByUser] = useState<CapturedPiece[]>([]);
+  const [capturedByAI, setCapturedByAI] = useState<CapturedPiece[]>([]);
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
@@ -111,12 +124,37 @@ export default function ChessBoard({
   );
 
   const isAtLivePosition = currentPosition === moveHistory.length - 1;
+  
+  function updateCapturedPieces(capturedPiece: CapturedPiece | null, byPlayer: boolean) {
+    if (!capturedPiece) return;
+    
+    if (byPlayer) {
+      setCapturedByUser(prev => [...prev, capturedPiece]);
+    } else {
+      setCapturedByAI(prev => [...prev, capturedPiece]);
+    }
+  }
 
   function recordMove(move: Move) {
     const newFen = game.fen();
+    
+    // Check if a piece was captured
+    let capturedPiece: CapturedPiece | null = null;
+    if (move.captured) {
+      capturedPiece = {
+        type: move.captured as PieceType,
+        color: move.color === 'w' ? 'b' : 'w'
+      };
+      
+      // Update captured pieces based on who made the move
+      const byPlayer = move.color === userColor;
+      updateCapturedPieces(capturedPiece, byPlayer);
+    }
+    
     const newHistoryItem: MoveHistoryItem = {
       fen: newFen,
       lastMove: { from: move.from, to: move.to },
+      capturedPiece
     };
 
     setMoveHistory((prevHistory) => {
@@ -258,6 +296,10 @@ export default function ChessBoard({
     setPendingPromotion(null);
   }
 
+  function resetMaterial() {
+    setCapturedByUser([]);
+    setCapturedByAI([]);
+  }
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
@@ -307,6 +349,13 @@ export default function ChessBoard({
 
   return (
     <div className="relative">
+      {/* Material advantage tracker */}
+      <MaterialTracker
+        capturedByUser={capturedByUser}
+        capturedByAI={capturedByAI}
+        userColor={userColor}
+      />
+
       {/* Move navigation */}
       <div className="flex items-center space-x-4 mb-2">
         <button
