@@ -20,7 +20,7 @@ const PromotionOverlay: React.FC<PromotionOverlayProps> = ({ color, onSelect, on
       onClick={onCancel}
     >
       <div
-        className="mt-4 p-4 bg-gray-800 text-white rounded shadow-md flex space-x-6"
+        className="mt-40 p-4 bg-gray-800 text-white rounded shadow-md flex space-x-6"
         onClick={(e) => e.stopPropagation()}
       >
         {promotions.map((p) => (
