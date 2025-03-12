@@ -197,19 +197,74 @@ export default function SignUpPage() {
               gap: 8px !important;
             }
 
-            /* Make borders more visible for social buttons */
+            /* NEW STYLES - Make borders more visible for social buttons */
             .cl-socialButtonsBlockButton {
               border: 2px solid #3A4074 !important;
               box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+              transition: all 0.3s ease-out !important;
+              position: relative !important;
+              overflow: hidden !important;
+            }
+            
+            /* Modern hover effect for social buttons */
+            .cl-socialButtonsBlockButton:hover {
+              border-color: rgba(124, 58, 237, 0.7) !important;
+              box-shadow: 0 0 20px rgba(124, 58, 237, 0.3) !important;
+              transform: translateY(-2px) !important;
+            }
+            
+            /* Add shine effect on hover */
+            .cl-socialButtonsBlockButton:before {
+              content: '' !important;
+              position: absolute !important;
+              top: -100% !important;
+              left: -100% !important;
+              width: 300% !important;
+              height: 300% !important;
+              background: linear-gradient(
+                115deg,
+                transparent 0%,
+                transparent 40%,
+                rgba(255, 255, 255, 0.15) 50%,
+                transparent 60%,
+                transparent 100%
+              ) !important;
+              transition: all 0.6s ease-out !important;
+            }
+            
+            .cl-socialButtonsBlockButton:hover:before {
+              top: -50% !important;
+              left: -50% !important;
             }
 
-            /* Make the form field input border more visible */
+            /* Enhanced GitHub icon visibility */
+            .cl-socialButtonsBlockButton[data-provider='github'] img,
+            .cl-socialButtonsProviderIcon[data-provider='github'] {
+              filter: brightness(0) invert(1) !important;
+              opacity: 1 !important;
+              transform: scale(1.2) !important;
+            }
+
+            /* NEW STYLES - Make the form field input border more visible */
             .cl-formFieldInput {
               border: 2px solid #3A4074 !important;
               box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+              transition: all 0.3s ease-out !important;
             }
             
-            /* Fix button text wrapping issue */
+            /* Modern hover and focus effects for input fields */
+            .cl-formFieldInput:hover {
+              border-color: rgba(124, 58, 237, 0.6) !important;
+              box-shadow: 0 0 15px rgba(124, 58, 237, 0.2) !important;
+            }
+            
+            .cl-formFieldInput:focus {
+              border-color: rgba(124, 58, 237, 0.8) !important;
+              box-shadow: 0 0 20px rgba(124, 58, 237, 0.3) !important;
+              transform: translateY(-1px) !important;
+            }
+            
+            /* NEW STYLES - Fix button text wrapping issue */
             .cl-socialButtonsBlockButton[data-provider='facebook'] .cl-socialButtonsBlockButton__text,
             .cl-socialButtonsBlockButton[data-provider='github'] .cl-socialButtonsBlockButton__text,
             .cl-socialButtonsBlockButton[data-provider='google'] .cl-socialButtonsBlockButton__text {
@@ -228,6 +283,43 @@ export default function SignUpPage() {
               flex-direction: row !important; 
               justify-content: space-between !important;
               width: 100% !important;
+            }
+            
+            /* Enhanced primary button styling */
+            .cl-formButtonPrimary {
+              background: linear-gradient(135deg, #7c3aed, #4f46e5) !important;
+              position: relative !important;
+              overflow: hidden !important;
+              transition: all 0.4s ease !important;
+            }
+            
+            .cl-formButtonPrimary:hover {
+              background: linear-gradient(135deg, #8b5cf6, #6366f1) !important;
+              box-shadow: 0 0 25px rgba(124, 58, 237, 0.5) !important;
+            }
+            
+            /* Add shine effect on primary button hover */
+            .cl-formButtonPrimary:before {
+              content: '' !important;
+              position: absolute !important;
+              top: -100% !important;
+              left: -100% !important;
+              width: 300% !important;
+              height: 300% !important;
+              background: linear-gradient(
+                115deg,
+                transparent 0%,
+                transparent 40%,
+                rgba(255, 255, 255, 0.2) 50%,
+                transparent 60%,
+                transparent 100%
+              ) !important;
+              transition: all 0.8s ease-out !important;
+            }
+            
+            .cl-formButtonPrimary:hover:before {
+              top: -50% !important;
+              left: -50% !important;
             }
           `}</style>
 
