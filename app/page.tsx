@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect} from 'react';
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
