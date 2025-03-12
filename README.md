@@ -136,12 +136,19 @@ Use the provided "Home" button to navigate back to the main landing page.
 
 ## Chess AI
 
-The application features a chess AI that employs a minimax algorithm with alpha-beta pruning to make decisions:
+- **Move Generation and Decision Making:**
+  - Utilizes a minimax algorithm enhanced with alpha-beta pruning to efficiently evaluate potential moves.
+  - Searches the game tree recursively to find optimal moves based on scoring positions.
 
-- **Minimax Algorithm:** The AI evaluates the game tree by considering all possible moves and their outcomes up to a certain depth.
-- **Alpha-Beta Pruning:** Optimizes the search by eliminating branches that won't affect the final decision.
-- **Positional Evaluation:** Pieces are valued not just by their traditional worth but also by their position on the board.
-- **Depth Configuration:** The algorithm searches several moves ahead, with the depth adjustable in the codebase for different difficulty levels.
+- **Algorithm Features:**
+  - **Positional Evaluation:** Assigns values to chess pieces not only by their standard worth (pawn, knight, bishop, rook, queen) but also by their position on the board, encouraging strategic gameplay.
+  - **Depth Configuration:** The search depth can be customized within the codebase, enabling control over AI difficulty by determining how many moves ahead the algorithm evaluates.
+
+- **Performance Optimization:**
+  - **Alpha-Beta Pruning:** Optimizes the move selection by pruning branches in the game tree that don't affect the final outcome, significantly improving performance.
+
+- **Adjustability:**
+  - Flexible difficulty adjustment through code-based depth settings to cater to varying player skill levels.
 
 The AI evaluates board positions based on:
 
