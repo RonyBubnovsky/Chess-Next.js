@@ -322,6 +322,7 @@ const Home: React.FC = () => {
                         onClick={async () => {
                           setLoadingButton("signOut");
                           await signOut();
+                          toast.success("Sign out successful", { duration: 1500 });
                           setLoadingButton(null);
                         }}
                         whileHover={{ scale: 1.05 }}
