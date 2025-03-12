@@ -1,12 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Chess, Square, Move} from 'chess.js';
+import { Chess, Square, Move } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import PromotionOverlay from './PromotionOverlay';
 import MaterialTracker from './MaterialTracker';
 import { minutesToSeconds, formatTime } from '../lib/utils';
-import { findBestMove } from '../lib/chessEngine';
 
 type Orientation = 'white' | 'black';
 type PieceType = 'p' | 'n' | 'b' | 'r' | 'q';
@@ -27,6 +26,13 @@ interface MoveHistoryItem {
   fen: string;
   lastMove: { from: string; to: string } | null;
   capturedPiece: CapturedPiece | null;
+}
+
+// Define a type for minimal move input.
+interface MoveInputType {
+  from: Square;
+  to: Square;
+  promotion?: string;
 }
 
 export default function ChessBoard({
@@ -210,13 +216,37 @@ export default function ChessBoard({
     }
   }
 
+  // Use a Web Worker to compute the AI move in a separate thread
   function makeAIMove() {
     if (game.turn() !== aiColor || game.isGameOver()) return;
-    const bestMove = findBestMove(game, aiColor, 3);
-    if (!bestMove) return;
-    game.move(bestMove);
-    recordMove(bestMove);
-    checkGameStatus();
+    
+    const aiWorker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url));
+    
+    // Post the current game state to the worker
+    aiWorker.postMessage({
+      fen: game.fen(),
+      aiColor,
+      maxDepth: 3,
+    });
+    
+    aiWorker.onmessage = (event) => {
+      const bestMove = event.data as Move | null;
+      if (bestMove) {
+        // Build a minimal move input using our defined type.
+        const moveInput: MoveInputType = { from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion };
+        const moveMade = game.move(moveInput);
+        if (moveMade) {
+          recordMove(moveMade);
+          checkGameStatus();
+        }
+      }
+      aiWorker.terminate();
+    };
+
+    aiWorker.onerror = (error) => {
+      console.error('AI Worker error:', error);
+      aiWorker.terminate();
+    };
   }
 
   function userMove(from: string, to: string, promotion?: string): boolean {
@@ -344,14 +374,12 @@ export default function ChessBoard({
 
   return (
     <div className="relative">
-      {/* Material advantage tracker */}
       <MaterialTracker
         capturedByUser={capturedByUser}
         capturedByAI={capturedByAI}
         userColor={userColor}
       />
 
-      {/* Move navigation */}
       <div className="flex items-center space-x-4 mb-2">
         <button
           onClick={handleGoBack}
@@ -375,7 +403,6 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* Clocks */}
       <div className="flex justify-between items-center mb-2 text-white text-lg">
         {orientation === 'white' ? (
           <>
@@ -390,7 +417,6 @@ export default function ChessBoard({
         )}
       </div>
 
-      {/* Chessboard - Using a custom wrapper div for better positioning context */}
       <div 
         ref={boardContainerRef}
         className="chess-container relative" 
@@ -410,14 +436,11 @@ export default function ChessBoard({
             background: 'transparent', 
             boxShadow: 'none'
           }}
-          // Disable piece dragging
           arePiecesDraggable={false}
-          // Reduce the animation duration to make piece movement feel more responsive
           animationDuration={200}
         />
       </div>
 
-      {/* Promotion overlay */}
       {pendingPromotion && (
         <PromotionOverlay
           color={pendingPromotion.color}
@@ -426,7 +449,6 @@ export default function ChessBoard({
         />
       )}
 
-      {/* Game message */}
       {gameMessage && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
           <h1 className="text-white text-2xl font-bold text-center p-4">
@@ -434,7 +456,6 @@ export default function ChessBoard({
           </h1>
         </div>
       )}
-
     </div>
   );
 }
