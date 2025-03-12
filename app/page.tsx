@@ -95,22 +95,24 @@ const Home: React.FC = () => {
     setLoadingButton("deleteAccount");
     try {
       // Call the API route to delete the account.
-      const response = await fetch("/api/deleteAccount", {
-        method: "DELETE",
-      });
+      const response = await fetch("/api/deleteAccount", { method: "DELETE" });
       if (!response.ok) {
         throw new Error("Failed to delete account");
       }
       // After deleting the account, sign out the user.
       await signOut();
-    } catch (error: any) {
-      console.error("Account deletion failed:", error);
-      // Display an error message using a toast notification (or your preferred method)
-      toast.error(error.message || "Account deletion failed. Please try again.");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Account deletion failed:", error);
+        toast.error(error.message || "Account deletion failed. Please try again.");
+      } else {
+        console.error("Account deletion failed:", error);
+        toast.error("Account deletion failed. Please try again.");
+      }
     } finally {
-      // Reset loading state regardless of outcome
+      // Reset loading state regardless of outcome.
       setLoadingButton(null);
-    }
+    }    
   };
 
   // Prevent rendering until client-side hydration is complete.
