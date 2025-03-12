@@ -166,7 +166,7 @@ useEffect(() => {
         throw new Error("Failed to delete account");
       }
       // Show a success toast after the account is deleted.
-      toast.success("Account deleted successfully");
+      toast.success("Account deleted successfully", { duration: 1500 });
       // After deleting the account, sign out the user.
       await signOut();
     } catch (error: unknown) {
