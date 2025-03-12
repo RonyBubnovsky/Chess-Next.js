@@ -163,6 +163,7 @@ export default function SignUpPage() {
               white-space: nowrap !important;
               overflow: visible !important;
               text-overflow: clip !important;
+              font-size: 14px !important;
             }
 
             /* Fix overflow issues */
@@ -176,19 +177,57 @@ export default function SignUpPage() {
             /* Ensure social buttons text is fully visible */
             .cl-socialButtonsBlockButton__text {
               width: auto !important;
-              min-width: 90px !important;
+              min-width: 100px !important;
+              overflow: visible !important;
+              white-space: nowrap !important;
+              text-overflow: initial !important;
             }
             
             /* Make social buttons container wider */
             .cl-socialButtonsIconButton,
             .cl-socialButtonsBlockButton {
-              min-width: 110px !important;
+              min-width: 120px !important;
+              padding-left: 6px !important;
+              padding-right: 6px !important;
             }
             
             /* Make the social buttons row have proper spacing */
             .cl-socialButtonsGroup {
               justify-content: space-between !important;
-              gap: 12px !important;
+              gap: 8px !important;
+            }
+
+            /* Make borders more visible for social buttons */
+            .cl-socialButtonsBlockButton {
+              border: 2px solid #3A4074 !important;
+              box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+            }
+
+            /* Make the form field input border more visible */
+            .cl-formFieldInput {
+              border: 2px solid #3A4074 !important;
+              box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+            }
+            
+            /* Fix button text wrapping issue */
+            .cl-socialButtonsBlockButton[data-provider='facebook'] .cl-socialButtonsBlockButton__text,
+            .cl-socialButtonsBlockButton[data-provider='github'] .cl-socialButtonsBlockButton__text,
+            .cl-socialButtonsBlockButton[data-provider='google'] .cl-socialButtonsBlockButton__text {
+              font-size: 14px !important;
+              width: auto !important;
+              overflow: visible !important;
+              white-space: nowrap !important;
+              text-overflow: initial !important;
+              display: inline-block !important;
+              min-width: initial !important;
+            }
+            
+            /* Specific layout adjustments for social buttons group */
+            .cl-socialButtonsGroup {
+              display: flex !important;
+              flex-direction: row !important; 
+              justify-content: space-between !important;
+              width: 100% !important;
             }
           `}</style>
 
@@ -215,7 +254,7 @@ export default function SignUpPage() {
                 `,
                 formFieldInput: `
                   bg-[#171B3A]
-                  border border-[#2A2F52]
+                  border-2 border-[#3A4074]
                   rounded-xl
                   text-white
                   placeholder:text-gray-400
@@ -226,6 +265,7 @@ export default function SignUpPage() {
                   py-3
                   max-w-full
                   w-full
+                  shadow-[0_0_0_1px_rgba(124,58,237,0.1)]
                 `,
                 formFieldLabel: `
                   text-white/90
@@ -259,25 +299,28 @@ export default function SignUpPage() {
                   text-white/50
                 `,
                 socialButtonsBlockButton: `
-                  border-[#2A2F52]
+                  border-2 border-[#3A4074]
                   bg-[#171B3A]
                   hover:bg-[#1E234A]
                   rounded-xl
                   transition-all
                   text-white
-                  px-4
+                  px-2
                   py-3
                   font-medium
                   flex items-center justify-center
                   gap-2
                   [&>*]:text-white
                   w-full
-                  min-w-[110px]
+                  min-width-[120px]
+                  shadow-[0_0_0_1px_rgba(124,58,237,0.1)]
+                  text-sm
                 `,
                 socialButtonsIconButton: `
                   text-white
                   [&>*]:text-white
-                  min-w-[110px]
+                  min-width-[120px]
+                  text-sm
                 `,
                 socialButtonsProviderIcon: `
                   filter brightness(0) invert(1)
@@ -302,7 +345,7 @@ export default function SignUpPage() {
                   text-white
                   bg-[#171B3A]
                   hover:bg-[#1E234A]
-                  border border-[#2A2F52]
+                  border-2 border-[#3A4074]
                   rounded-xl
                 `,
                 socialButtonsIconRow: `
@@ -315,11 +358,13 @@ export default function SignUpPage() {
                 socialButtonsBlockButtonText: `
                   whitespace-nowrap
                   overflow-visible
+                  text-sm
                 `,
                 socialButtonsGroup: `
-                  grid
-                  grid-cols-3 
-                  gap-3
+                  flex
+                  flex-row
+                  justify-between
+                  gap-2
                 `,
               },
               layout: {
