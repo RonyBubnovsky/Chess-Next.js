@@ -172,11 +172,11 @@ function isEndgame(gameInstance: Chess): boolean {
 }
 
 // Add randomness to make the engine less predictable
-// function addRandomness(evaluation: number, depth: number): number {
-//   // Add more randomness at higher depths (opening and early game)
-//   const randomFactor = depth > 3 ? 10 : 5;
-//   return evaluation + (Math.random() * randomFactor - randomFactor / 2);
-// }
+function addRandomness(evaluation: number, depth: number): number {
+  // Add more randomness at lower depths (opening and early game)
+  const randomFactor = depth > 3 ? 10 : 5;
+  return evaluation + (Math.random() * randomFactor - randomFactor / 2);
+}
 
 // Helper function to convert moves to algebraic notation
 function moveToAlgebraic(gameInstance: Chess, move: Move): string {
@@ -247,7 +247,7 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
   let evaluation = 0;
   const board = gameInstance.board();
   
-  // Material and position evaluation
+  // Material and positional evaluation
   for (let row = 0; row < 8; row++) {
     for (let col = 0; col < 8; col++) {
       const piece = board[row][col];
@@ -256,7 +256,7 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
       // Base piece value
       const pieceValue = PIECE_VALUES[piece.type];
       
-      // Position value from tables
+      // Position value from piece-square tables
       const table = getPieceSquareTable(piece.type, endgame);
       let positionValue = 0;
       
@@ -266,7 +266,7 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
         positionValue = table[row][col];
       }
       
-      // Add to evaluation
+      // Add material and positional values to evaluation
       if (piece.color === aiColor) {
         evaluation += pieceValue + positionValue * 0.1;
       } else {
@@ -279,18 +279,16 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
   const currentTurn = gameInstance.turn();
   const currentMoves = gameInstance.moves().length;
   
-  // Clone the game and see opponent's mobility
+  // Clone the game to evaluate opponent's mobility
   const clonedGame = new Chess(gameInstance.fen());
-  // Need to make a dummy move and undo it to switch turns
   const moves = clonedGame.moves({ verbose: true });
   if (moves.length > 0) {
     clonedGame.move(moves[0]);
-    clonedGame.undo(); // Undo to switch turns
+    clonedGame.undo();
   }
   const opponentMoves = clonedGame.moves().length;
   
-  // Add mobility factor
-  const mobilityFactor = 5; // Value per move
+  const mobilityFactor = 5;
   if (currentTurn === aiColor) {
     evaluation += currentMoves * mobilityFactor;
     evaluation -= opponentMoves * mobilityFactor;
@@ -299,107 +297,109 @@ export function evaluateBoard(gameInstance: Chess, aiColor: string): number {
     evaluation += opponentMoves * mobilityFactor;
   }
   
-// Pawn structure: doubled pawns penalty, isolated pawns penalty
-const pawnColumns = { w: Array(8).fill(0), b: Array(8).fill(0) };
-for (let row = 0; row < 8; row++) {
-  for (let col = 0; col < 8; col++) {
-    const piece = board[row][col];
-    if (piece && piece.type === 'p') {
-      pawnColumns[piece.color][col]++;
+  // Pawn structure: doubled and isolated pawns
+  const pawnColumns = { w: Array(8).fill(0), b: Array(8).fill(0) };
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.type === 'p') {
+        pawnColumns[piece.color][col]++;
+      }
     }
   }
-}
-
-// Penalize doubled pawns
-const doubledPawnPenalty = 15;
-for (let col = 0; col < 8; col++) {
-  if (pawnColumns['w'][col] > 1) {
-    evaluation -= (pawnColumns['w'][col] - 1) * doubledPawnPenalty * (aiColor === 'w' ? 1 : -1);
-  }
-  if (pawnColumns['b'][col] > 1) {
-    evaluation += (pawnColumns['b'][col] - 1) * doubledPawnPenalty * (aiColor === 'w' ? 1 : -1);
-  }
-}
-
-// Isolated pawns penalty
-const isolatedPawnPenalty = 20;
-for (let col = 0; col < 8; col++) {
-  const leftNeighbor = col > 0 ? pawnColumns['w'][col - 1] : 0;
-  const rightNeighbor = col < 7 ? pawnColumns['w'][col + 1] : 0;
   
-  if (pawnColumns['w'][col] > 0 && leftNeighbor === 0 && rightNeighbor === 0) {
-    evaluation -= isolatedPawnPenalty * (aiColor === 'w' ? 1 : -1);
-  }
-  
-  const bLeftNeighbor = col > 0 ? pawnColumns['b'][col - 1] : 0;
-  const bRightNeighbor = col < 7 ? pawnColumns['b'][col + 1] : 0;
-  
-  if (pawnColumns['b'][col] > 0 && bLeftNeighbor === 0 && bRightNeighbor === 0) {
-    evaluation += isolatedPawnPenalty * (aiColor === 'w' ? 1 : -1);
-  }
-}
-
-// King safety evaluation
-const kingPenalty = 10;
-
-// Check if any opponent piece is attacking squares around the king
-for (let row = 0; row < 8; row++) {
+  const doubledPawnPenalty = 15;
   for (let col = 0; col < 8; col++) {
-    const piece = board[row][col];
-    if (piece && piece.type === 'k') {
-      const kingColor = piece.color;
-      
-      // Count nearby pieces
-      let friendlyPieces = 0;
-      let attackingPieces = 0;
-      
-      for (let dr = -1; dr <= 1; dr++) {
-        for (let dc = -1; dc <= 1; dc++) {
-          if (dr === 0 && dc === 0) continue;
-          
-          const r = row + dr;
-          const c = col + dc;
-          
-          if (r >= 0 && r < 8 && c >= 0 && c < 8) {
-            const nearby = board[r][c];
-            if (nearby) {
-              if (nearby.color === kingColor) {
-                friendlyPieces++;
-              } else {
-                attackingPieces++;
+    if (pawnColumns['w'][col] > 1) {
+      evaluation -= (pawnColumns['w'][col] - 1) * doubledPawnPenalty * (aiColor === 'w' ? 1 : -1);
+    }
+    if (pawnColumns['b'][col] > 1) {
+      evaluation += (pawnColumns['b'][col] - 1) * doubledPawnPenalty * (aiColor === 'w' ? 1 : -1);
+    }
+  }
+  
+  const isolatedPawnPenalty = 20;
+  for (let col = 0; col < 8; col++) {
+    const leftNeighbor = col > 0 ? pawnColumns['w'][col - 1] : 0;
+    const rightNeighbor = col < 7 ? pawnColumns['w'][col + 1] : 0;
+    
+    if (pawnColumns['w'][col] > 0 && leftNeighbor === 0 && rightNeighbor === 0) {
+      evaluation -= isolatedPawnPenalty * (aiColor === 'w' ? 1 : -1);
+    }
+    
+    const bLeftNeighbor = col > 0 ? pawnColumns['b'][col - 1] : 0;
+    const bRightNeighbor = col < 7 ? pawnColumns['b'][col + 1] : 0;
+    
+    if (pawnColumns['b'][col] > 0 && bLeftNeighbor === 0 && bRightNeighbor === 0) {
+      evaluation += isolatedPawnPenalty * (aiColor === 'w' ? 1 : -1);
+    }
+  }
+  
+  // King safety evaluation
+  const kingPenalty = 10;
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.type === 'k') {
+        const kingColor = piece.color;
+        let friendlyPieces = 0;
+        let attackingPieces = 0;
+        
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const r = row + dr;
+            const c = col + dc;
+            if (r >= 0 && r < 8 && c >= 0 && c < 8) {
+              const nearby = board[r][c];
+              if (nearby) {
+                if (nearby.color === kingColor) {
+                  friendlyPieces++;
+                } else {
+                  attackingPieces++;
+                }
               }
             }
           }
         }
-      }
-      
-      // Add king safety to evaluation
-      if (kingColor === aiColor) {
-        evaluation -= attackingPieces * kingPenalty;
-        evaluation += friendlyPieces * kingPenalty * 0.5;
-      } else {
-        evaluation += attackingPieces * kingPenalty;
-        evaluation -= friendlyPieces * kingPenalty * 0.5;
+        
+        if (kingColor === aiColor) {
+          evaluation -= attackingPieces * kingPenalty;
+          evaluation += friendlyPieces * kingPenalty * 0.5;
+        } else {
+          evaluation += attackingPieces * kingPenalty;
+          evaluation -= friendlyPieces * kingPenalty * 0.5;
+        }
       }
     }
   }
-}
-
-// Add a small bonus if AI is in check
-if (gameInstance.inCheck()) {
-  if (gameInstance.turn() === aiColor) {
-    evaluation -= 50;
-  } else {
-    evaluation += 50;
+  
+  // Small bonus/penalty if in check
+  if (gameInstance.inCheck()) {
+    if (gameInstance.turn() === aiColor) {
+      evaluation -= 50;
+    } else {
+      evaluation += 50;
+    }
   }
-}
-
-return evaluation;
+  
+  // Apply randomness to the evaluation.
+  // Here we use a depth-based randomness factor.
+  // You can adjust the depth value as needed.
+  evaluation = addRandomness(evaluation, isEndgame(gameInstance) ? 4 : 2);
+  
+  return evaluation;
 }
 
 // Minimax algorithm with alpha-beta pruning
-export function minimax(gameInstance: Chess, depth: number, alpha: number, beta: number, maximizingPlayer: boolean, aiColor: string): [number, Move | null] {
-  // Base case: depth reached or game over
+export function minimax(
+  gameInstance: Chess,
+  depth: number,
+  alpha: number,
+  beta: number,
+  maximizingPlayer: boolean,
+  aiColor: string
+): [number, Move | null] {
   if (depth === 0 || gameInstance.isGameOver()) {
     return [evaluateBoard(gameInstance, aiColor), null];
   }
@@ -408,13 +408,11 @@ export function minimax(gameInstance: Chess, depth: number, alpha: number, beta:
   if (depth >= 3) {
     const bookMove = checkOpeningBook(gameInstance);
     if (bookMove) {
-      return [0, bookMove]; // Return book move
+      return [0, bookMove];
     }
   }
   
   const moves = gameInstance.moves({ verbose: true }) as Move[];
-  
-  // Order moves to improve alpha-beta pruning
   moves.sort((a, b) => {
     const aScore = a.captured ? PIECE_VALUES[a.captured] : 0;
     const bScore = b.captured ? PIECE_VALUES[b.captured] : 0;
@@ -436,11 +434,8 @@ export function minimax(gameInstance: Chess, depth: number, alpha: number, beta:
       }
       
       alpha = Math.max(alpha, evalScore);
-      if (beta <= alpha) {
-        break;
-      }
+      if (beta <= alpha) break;
     }
-    
     return [maxEval, bestMove];
   } else {
     let minEval = Infinity;
@@ -455,20 +450,20 @@ export function minimax(gameInstance: Chess, depth: number, alpha: number, beta:
       }
       
       beta = Math.min(beta, evalScore);
-      if (beta <= alpha) {
-        break;
-      }
+      if (beta <= alpha) break;
     }
-    
     return [minEval, bestMove];
   }
 }
 
 // Function to find the best move using iterative deepening
-export function findBestMove(gameInstance: Chess, aiColor: string, maxDepth = 3): Move | null {
+export function findBestMove(
+  gameInstance: Chess,
+  aiColor: string,
+  maxDepth = 3
+): Move | null {
   let bestMove: Move | null = null;
   
-  // Iterative deepening
   for (let depth = 1; depth <= maxDepth; depth++) {
     const [, move] = minimax(
       gameInstance,
@@ -479,23 +474,18 @@ export function findBestMove(gameInstance: Chess, aiColor: string, maxDepth = 3)
       aiColor
     );
     
-    // Update best move if one is found
     if (move) {
       bestMove = move;
     }
   }
   
-  // Add randomness for variety
-  if (bestMove) {
-    const randomAdjustment = Math.random() < 0.1;
-    if (randomAdjustment) {
-      const moves = gameInstance.moves({ verbose: true }) as Move[];
-      if (moves.length > 0) {
-        return moves[Math.floor(Math.random() * moves.length)];
-      }
+  // Occasional randomness in move selection for variety
+  if (bestMove && Math.random() < 0.1) {
+    const moves = gameInstance.moves({ verbose: true }) as Move[];
+    if (moves.length > 0) {
+      return moves[Math.floor(Math.random() * moves.length)];
     }
   }
   
   return bestMove;
 }
-      
