@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-hot-toast';
 import ThreeDScene from '../components/ThreeDScene';
 
 /**
@@ -84,6 +85,33 @@ const Home: React.FC = () => {
 
   // Toggle the theme between dark and light mode.
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  // Delete account functionality
+  const handleDeleteAccount = async () => {
+    // Confirm deletion with the user
+    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      return;
+    }
+    setLoadingButton("deleteAccount");
+    try {
+      // Call the API route to delete the account.
+      const response = await fetch("/api/deleteAccount", {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete account");
+      }
+      // After deleting the account, sign out the user.
+      await signOut();
+    } catch (error: any) {
+      console.error("Account deletion failed:", error);
+      // Display an error message using a toast notification (or your preferred method)
+      toast.error(error.message || "Account deletion failed. Please try again.");
+    } finally {
+      // Reset loading state regardless of outcome
+      setLoadingButton(null);
+    }
+  };
 
   // Prevent rendering until client-side hydration is complete.
   if (!isMounted) {
@@ -245,6 +273,20 @@ const Home: React.FC = () => {
                         disabled={loadingButton === "signOut"}
                       >
                         {loadingButton === "signOut" ? <LoadingSVG /> : "Sign Out"}
+                      </motion.button>
+                      {/* Delete Account Button */}
+                      <motion.button
+                        onClick={handleDeleteAccount}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className={`px-8 py-4 w-full sm:w-auto rounded-xl font-medium transition ${
+                          isDarkMode 
+                            ? 'bg-red-600 text-white border border-red-700'
+                            : 'bg-red-500 text-white border border-red-600 shadow-md'
+                        }`}
+                        disabled={loadingButton === "deleteAccount"}
+                      >
+                        {loadingButton === "deleteAccount" ? <LoadingSVG /> : "Delete Account"}
                       </motion.button>
                     </>
                   ) : (
