@@ -1,9 +1,16 @@
 
 import { NextResponse } from 'next/server';
-import { clerkClient } from '@clerk/nextjs/server';
+import { clerkClient, auth } from '@clerk/nextjs/server';
 import redis from '../../../lib/redis';
 
 export async function GET() {
+  // Get the current user id from Clerk auth.
+    const { userId } = await auth();
+  
+    // If the user is not authenticated, return a 401 Unauthorized.
+    if (!userId) {
+      return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+    }
   // 1. Check if we have a cached leaderboard
   const cachedLeaderboard = await redis.get('leaderboard:top10');
   if (cachedLeaderboard) {

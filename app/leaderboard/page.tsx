@@ -17,7 +17,7 @@ interface LeaderboardEntry {
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   // Retrieve current user from Clerk
   const { user } = useUser();
   const currentUsername = user?.username || '';
@@ -26,7 +26,10 @@ export default function LeaderboardPage() {
     fetch('/api/leaderboard')
       .then((res) => res.json())
       .then((data) => {
-        setLeaderboard(data);
+        // Ensure we got an array
+        if (Array.isArray(data)) {
+          setLeaderboard(data);
+        }
         setLoading(false);
       })
       .catch((err) => {
@@ -34,6 +37,10 @@ export default function LeaderboardPage() {
         setLoading(false);
       });
   }, []);
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Protected>
