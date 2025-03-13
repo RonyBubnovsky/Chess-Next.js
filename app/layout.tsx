@@ -18,7 +18,7 @@ export default function RootLayout({
         <ClerkProvider>
           {children}
           {/* Toaster component for global notifications */}
-          <Toaster position="top-right" toastOptions={{ duration: 5000 }} />
+          <Toaster position="top-right" toastOptions={{ duration: 1500 }} />
         </ClerkProvider>
       </body>
     </html>
