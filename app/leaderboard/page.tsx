@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Protected from '../../components/Protected';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Trophy, ChevronLeft } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
@@ -35,6 +36,7 @@ export default function LeaderboardPage() {
   }, []);
 
   return (
+    <Protected>
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex flex-col items-center justify-center p-6 text-white overflow-hidden">
       {/* Background bubbles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -223,5 +225,6 @@ export default function LeaderboardPage() {
         © {new Date().getFullYear()} RonyChess. All rights reserved.
       </motion.div>
     </div>
+    </Protected>
   );
 }
