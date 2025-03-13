@@ -286,16 +286,20 @@ export default function ChessBoard({
     if (!move) return false;
 
     recordMove(move);
+
     if (move && move.promotion) {
-      // Calculate bonus: pawn (1) promoted to queen (9) gives +8,
-      // rook (5) gives +4, bishop or knight (3) give +2.
       const bonus = move.promotion === 'q' ? 9 : move.promotion === 'r' ? 5 : 3;
       if (move.color === userColor) {
         setPromotionBonusUser(prev => prev + bonus);
+        // When you (user) promote, it’s like giving your pawn to the AI.
+        setCapturedByAI(prev => [...prev, { type: 'p', color: userColor }]);
       } else {
         setPromotionBonusAI(prev => prev + bonus);
+        // If the AI promotes, add a pawn to your captured pieces.
+        setCapturedByUser(prev => [...prev, { type: 'p', color: aiColor }]);
       }
     }
+    
     
     checkGameStatus();
     setSelectedSquare(null);
