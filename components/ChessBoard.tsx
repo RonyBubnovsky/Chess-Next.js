@@ -64,6 +64,8 @@ export default function ChessBoard({
   // Material tracking
   const [capturedByUser, setCapturedByUser] = useState<CapturedPiece[]>([]);
   const [capturedByAI, setCapturedByAI] = useState<CapturedPiece[]>([]);
+  const [promotionBonusUser, setPromotionBonusUser] = useState(0);
+  const [promotionBonusAI, setPromotionBonusAI] = useState(0);
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
@@ -284,6 +286,17 @@ export default function ChessBoard({
     if (!move) return false;
 
     recordMove(move);
+    if (move && move.promotion) {
+      // Calculate bonus: pawn (1) promoted to queen (9) gives +8,
+      // rook (5) gives +4, bishop or knight (3) give +2.
+      const bonus = move.promotion === 'q' ? 8 : move.promotion === 'r' ? 4 : 2;
+      if (move.color === userColor) {
+        setPromotionBonusUser(prev => prev + bonus);
+      } else {
+        setPromotionBonusAI(prev => prev + bonus);
+      }
+    }
+    
     checkGameStatus();
     setSelectedSquare(null);
     setMoveSquares({});
@@ -406,6 +419,8 @@ export default function ChessBoard({
         capturedByUser={capturedByUser}
         capturedByAI={capturedByAI}
         userColor={userColor}
+        promotionBonusUser={promotionBonusUser}
+        promotionBonusAI={promotionBonusAI}
       />
 
       <div className="flex items-center space-x-4 mb-2">

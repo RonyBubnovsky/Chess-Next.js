@@ -14,6 +14,8 @@ interface MaterialTrackerProps {
   capturedByUser: CapturedPiece[];
   capturedByAI: CapturedPiece[];
   userColor: PieceColor;
+  promotionBonusUser?: number;
+  promotionBonusAI?: number;
 }
 
 // Material values for each piece type
@@ -49,15 +51,21 @@ const PIECE_ORDER: PieceType[] = ['q', 'r', 'b', 'n', 'p'];
 export default function MaterialTracker({ 
   capturedByUser, 
   capturedByAI, 
-  userColor 
+  userColor,
+  promotionBonusUser=0,
+  promotionBonusAI=0
 }: MaterialTrackerProps) {
   // Calculate AI color based on user color
   const aiColor: PieceColor = userColor === 'w' ? 'b' : 'w';
   
   // Calculate total material points
-  const userPoints = capturedByUser.reduce((sum, piece) => sum + PIECE_VALUES[piece.type], 0);
-  const aiPoints = capturedByAI.reduce((sum, piece) => sum + PIECE_VALUES[piece.type], 0);
-  
+  const userPoints =
+  capturedByUser.reduce((sum, piece) => sum + PIECE_VALUES[piece.type], 0) +
+  (promotionBonusUser || 0);
+  const aiPoints =
+  capturedByAI.reduce((sum, piece) => sum + PIECE_VALUES[piece.type], 0) +
+  (promotionBonusAI || 0);
+
   // Calculate advantage
   const advantage = userPoints - aiPoints;
   const advantageText = advantage > 0 ? `+${advantage}` : advantage < 0 ? `${advantage}` : '0';
