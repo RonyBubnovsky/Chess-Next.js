@@ -68,10 +68,11 @@ export default function ChessBoard({
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
-  // Clocks
-  const initialTime = minutesToSeconds(timeControl);
+  // Clocks - Set to Infinity when timeControl is 0 (no time limit)
+  const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
   const [userTime, setUserTime] = useState(initialTime);
   const [aiTime, setAiTime] = useState(initialTime);
+  const [timerActive, setTimerActive] = useState(timeControl !== 0);
 
   // Promotion
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
@@ -341,6 +342,9 @@ export default function ChessBoard({
   }, [orientation, gameStarted]);
 
   useEffect(() => {
+    // Only run the clock if time control is enabled
+    if (!timerActive) return;
+    
     const clockInterval = setInterval(() => {
       if (gameEnded || game.isGameOver()) return;
       if (currentPosition === moveHistory.length - 1) {
@@ -366,10 +370,11 @@ export default function ChessBoard({
     }, 1000);
 
     return () => clearInterval(clockInterval);
-  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game]);
+  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game, timerActive]);
 
-  const userClock = formatTime(userTime);
-  const aiClock = formatTime(aiTime);
+  // Format the clock display - handle infinite time
+  const userClock = timeControl === 0 ? '∞' : formatTime(userTime);
+  const aiClock = timeControl === 0 ? '∞' : formatTime(aiTime);
   const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
 
   return (

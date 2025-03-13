@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, ReactElement, ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Trophy, Clock, RotateCcw, Home, Award, Zap } from 'lucide-react';
+import { ChevronLeft, Trophy, Clock, RotateCcw, Home, Award, Zap, InfinityIcon } from 'lucide-react';
 import Protected from '../../components/Protected';
 import ChessBoard from '../../components/ChessBoard';
 import StatisticsSection, { Stats } from '../../components/StatisticsSection';
@@ -92,7 +92,7 @@ export default function ChessPage(): ReactElement {
     setOrientation(rand);
   }, []);
 
-  const handleChooseTime = useCallback((minutes: number) => {
+  const handleChooseTime = useCallback((minutes: number | 0) => {
     setTimeControl(minutes);
     setBoardKey(prev => prev + 1);
   }, []);
@@ -331,7 +331,27 @@ export default function ChessPage(): ReactElement {
                   <p className="text-white/60 mb-6">Choose how long each player has for the entire game</p>
                 </motion.div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-3xl">
+                  {/* No Time Limit option */}
+                  <motion.div
+                    className={`relative overflow-hidden rounded-xl border-2 ${hoveredTime === 0 ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
+                    whileHover={{ scale: 1.03, y: -3 }}
+                    whileTap={{ scale: 0.98 }}
+                    onHoverStart={() => setHoveredTime(0)}
+                    onHoverEnd={() => setHoveredTime(null)}
+                    onClick={() => handleChooseTime(0)}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900 to-teal-900 opacity-20" />
+                    <div className="p-6 flex flex-col items-center relative z-10">
+                      <div className="h-16 w-16 rounded-full bg-gradient-to-r from-emerald-500 to-teal-600 mb-3 flex items-center justify-center shadow-lg">
+                        <InfinityIcon size={28} className="text-white" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-1">No Limit</h3>
+                      <p className="text-white/60 text-sm">Free play</p>
+                    </div>
+                  </motion.div>
+                  
+                  {/* Time options */}
                   {[10, 5, 3].map((minutes) => (
                     <motion.div
                       key={minutes}
@@ -377,10 +397,10 @@ export default function ChessPage(): ReactElement {
                   <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white/10 backdrop-blur-sm mb-6">
                     <div className={`w-3 h-3 rounded-full ${orientation === 'white' ? 'bg-white' : 'bg-gray-800 border border-gray-600'}`}></div>
                     <h2 className="text-lg font-medium">
-                      Playing as <span className="font-bold">{orientation}</span> • {timeControl} min
+                      Playing as <span className="font-bold">{orientation}</span> • {timeControl === 0 ? 'No time limit' : `${timeControl} min`}
                     </h2>
                     <div className="flex items-center gap-1">
-                      <Clock size={14} className="text-white/60" />
+                      {timeControl === 0 ? <InfinityIcon size={14} className="text-white/60" /> : <Clock size={14} className="text-white/60" />}
                     </div>
                   </div>
                 </motion.div>
