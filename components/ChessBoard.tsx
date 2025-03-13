@@ -72,7 +72,7 @@ export default function ChessBoard({
   const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
   const [userTime, setUserTime] = useState(initialTime);
   const [aiTime, setAiTime] = useState(initialTime);
-  const [timerActive, setTimerActive] = useState(timeControl !== 0);
+  const timerActive = timeControl !== 0;
 
   // Promotion
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
@@ -186,7 +186,14 @@ export default function ChessBoard({
         onGameEnd(result);
         setGameEnded(true);
       }
-    } else if (game.isStalemate() || game.isDraw()) {
+    } else if (game.isStalemate()) {
+      setGameMessage("Stalemate! It's a draw.");
+      if (!gameEnded && onGameEnd) {
+        onGameEnd('draw');
+        setGameEnded(true);
+      }
+    } 
+    else if (game.isDraw()) {
       setGameMessage("It's a draw!");
       if (!gameEnded && onGameEnd) {
         onGameEnd('draw');
