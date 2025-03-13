@@ -35,6 +35,6 @@ jobs:
       - name: Run Build
         run: npm run build
 
-      - name: Deploy to Render
+      - name: Deploy to Vercel
         if: ${{ success() }}
         run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
