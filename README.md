@@ -43,9 +43,9 @@ A modern chess application built with **Next.js** and **TypeScript** featuring r
 ### Live Demo
 
 Check out the live deployment of this application:
-[https://chess-next-js.onrender.com](https://chess-next-js.onrender.com)
+[RonyChess](https://ronychess.vercel.app/)
 
-The application is hosted on Render and includes all features from the local version, including authentication via Clerk and persistent statistics storage with Redis.
+The application is hosted on Vercel and includes all features from the local version, including authentication via Clerk and persistent statistics storage with Redis.
 
 ## Setup & Installation
 
