@@ -181,26 +181,42 @@ export default function ChessBoard({
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
-      setGameMessage(result === 'win' ? 'Checkmate! You win. You gained +50 ELO.' : 'Checkmate! You lose. You lost -50 ELO.');
+      setGameMessage(
+        result === 'win'
+          ? 'Checkmate! You win. You gained +50 ELO.'
+          : 'Checkmate! You lose. You lost -50 ELO.'
+      );
       if (!gameEnded && onGameEnd) {
         onGameEnd(result);
         setGameEnded(true);
       }
     } else if (game.isStalemate()) {
-      setGameMessage("Stalemate! It's a draw.");
+      setGameMessage("Stalemate! No legal moves and you're not in check.");
       if (!gameEnded && onGameEnd) {
         onGameEnd('draw');
         setGameEnded(true);
       }
-    } 
-    else if (game.isDraw()) {
-      setGameMessage("It's a draw!");
+    } else if (game.isThreefoldRepetition()) {
+      setGameMessage("Draw by threefold repetition!");
+      if (!gameEnded && onGameEnd) {
+        onGameEnd('draw');
+        setGameEnded(true);
+      }
+    } else if (game.isInsufficientMaterial()) {
+      setGameMessage("Draw due to insufficient material!");
+      if (!gameEnded && onGameEnd) {
+        onGameEnd('draw');
+        setGameEnded(true);
+      }
+    } else if (game.isDraw()) {
+      setGameMessage("Draw by the 50-move rule!");
       if (!gameEnded && onGameEnd) {
         onGameEnd('draw');
         setGameEnded(true);
       }
     }
   }
+  
 
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
