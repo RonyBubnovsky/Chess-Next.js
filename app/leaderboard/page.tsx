@@ -38,10 +38,6 @@ export default function LeaderboardPage() {
       });
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <Protected>
     <div className="relative min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 flex flex-col items-center justify-center p-6 text-white overflow-hidden">
