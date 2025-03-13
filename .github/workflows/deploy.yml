@@ -37,4 +37,4 @@ jobs:
 
       - name: Deploy to Render
         if: ${{ success() }}
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+        run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK }}"
