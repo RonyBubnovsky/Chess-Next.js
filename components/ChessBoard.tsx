@@ -138,7 +138,6 @@ export default function ChessBoard({
   // Promotion state.
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
-
   // Sync chess.js instance with displayFen.
   useEffect(() => {
     game.load(displayFen);
@@ -341,6 +340,16 @@ export default function ChessBoard({
       onGameEnd(result);
       setGameEnded(true);
     }
+  }
+
+  // Resign functionality: when the user clicks resign, end the game as a loss.
+  function handleResign() {
+    if (gameEnded || game.isGameOver()) return;
+    setGameMessage("You resigned! You lost -50 ELO.");
+    if (onGameEnd) {
+      onGameEnd("loss");
+    }
+    setGameEnded(true);
   }
 
   function makeAIMove() {
@@ -566,6 +575,18 @@ export default function ChessBoard({
           animationDuration={200}
         />
       </div>
+
+      {/* Resign Button */}
+      { !gameEnded && !game.isGameOver() && (
+        <div className="mt-4 flex justify-center">
+          <button 
+            onClick={handleResign} 
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Resign
+          </button>
+        </div>
+      )}
 
       {pendingPromotion && (
         <PromotionOverlay
