@@ -160,9 +160,36 @@ export default function ChessBoard({
   // Promotion state.
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
+  // New state for the square where the king is in check.
+  const [checkSquare, setCheckSquare] = useState<string | null>(null);
+
   // Sync chess.js instance with displayFen.
   useEffect(() => {
     game.load(displayFen);
+  }, [displayFen, game]);
+
+  // Update checkSquare whenever the board changes.
+  useEffect(() => {
+    if (game.inCheck()) {
+      // Find the king's square for the player whose turn it is.
+      const board = game.board();
+      let kingSquare: string | null = null;
+      for (let rank = 0; rank < 8; rank++) {
+        for (let file = 0; file < 8; file++) {
+          const piece = board[rank][file];
+          if (piece && piece.type === 'k' && piece.color === game.turn()) {
+            const fileLetter = String.fromCharCode('a'.charCodeAt(0) + file);
+            const rankNumber = 8 - rank;
+            kingSquare = fileLetter + rankNumber;
+            break;
+          }
+        }
+        if (kingSquare) break;
+      }
+      setCheckSquare(kingSquare);
+    } else {
+      setCheckSquare(null);
+    }
   }, [displayFen, game]);
 
   // Persist state to sessionStorage.
@@ -594,6 +621,7 @@ export default function ChessBoard({
           customSquareStyles={{
             ...highlightSquares,
             ...moveSquares,
+            ...(checkSquare ? { [checkSquare]: { border: '2px solid red' } } : {})
           }}
           customBoardStyle={{ 
             background: 'transparent', 
