@@ -120,7 +120,7 @@ export default function ChessPage(): ReactElement {
 
   const handleRestart = useCallback(() => {
     if (typeof window !== 'undefined') {
-      sessionStorage.clear();
+      sessionStorage.removeItem('chessGameState');
     }
     setOrientation(null);
     setTimeControl(null);
