@@ -146,24 +146,28 @@ export default function ChessBoard({
   // Persist state to sessionStorage.
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const gameState = {
-        moveHistory,
-        currentPosition,
-        moveCount,
-        displayFen,
-        gameMessage,
-        capturedByUser,
-        capturedByAI,
-        promotionBonusUser,
-        promotionBonusAI,
-        userTime,
-        aiTime,
-        gameStarted,
-        gameEnded,
-        orientation,
-        timeControl,
-      };
-      sessionStorage.setItem('chessGameState', JSON.stringify(gameState));
+      if (gameEnded) {
+        sessionStorage.removeItem('chessGameState');
+      } else {
+        const gameState = {
+          moveHistory,
+          currentPosition,
+          moveCount,
+          displayFen,
+          gameMessage,
+          capturedByUser,
+          capturedByAI,
+          promotionBonusUser,
+          promotionBonusAI,
+          userTime,
+          aiTime,
+          gameStarted,
+          gameEnded,
+          orientation,
+          timeControl,
+        };
+        sessionStorage.setItem('chessGameState', JSON.stringify(gameState));
+      }
     }
   }, [
     moveHistory,
