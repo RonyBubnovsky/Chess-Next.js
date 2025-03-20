@@ -285,71 +285,52 @@ export default function ChessBoard({
     setMoveCount((prevCount) => prevCount + 1);
   }
 
+  // Helper function to finish the game by removing the saved state.
+  function finishGame(result: 'win' | 'loss' | 'draw', message: string) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('chessGameState');
+      console.log('Session storage cleared:', sessionStorage.getItem('chessGameState'));
+    }
+    setGameMessage(message);
+    if (onGameEnd) {
+      onGameEnd(result);
+    }
+    setGameEnded(true);
+  }
+
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
-      setGameMessage(
+      finishGame(
+        result,
         result === 'win'
           ? 'Checkmate! You win. You gained +50 ELO.'
           : 'Checkmate! You lose. You lost -50 ELO.'
       );
-      if (!gameEnded && onGameEnd) {
-        onGameEnd(result);
-        setGameEnded(true);
-      }
     } else if (game.isStalemate()) {
-      setGameMessage("Stalemate! No legal moves and you're not in check.");
-      if (!gameEnded && onGameEnd) {
-        onGameEnd('draw');
-        setGameEnded(true);
-      }
+      finishGame('draw', "Stalemate! No legal moves and you're not in check.");
     } else if (game.isThreefoldRepetition()) {
-      setGameMessage("Draw by threefold repetition!");
-      if (!gameEnded && onGameEnd) {
-        onGameEnd('draw');
-        setGameEnded(true);
-      }
+      finishGame('draw', "Draw by threefold repetition!");
     } else if (game.isInsufficientMaterial()) {
-      setGameMessage("Draw due to insufficient material!");
-      if (!gameEnded && onGameEnd) {
-        onGameEnd('draw');
-        setGameEnded(true);
-      }
+      finishGame('draw', "Draw due to insufficient material!");
     } else if (game.isDraw()) {
-      setGameMessage("Draw by the 50-move rule!");
-      if (!gameEnded && onGameEnd) {
-        onGameEnd('draw');
-        setGameEnded(true);
-      }
+      finishGame('draw', "Draw by the 50-move rule!");
     }
   }
   
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
-    let result: 'win' | 'loss' | 'draw';
-    let message: string;
     if (timeoutColor === userColor) {
-      result = 'loss';
-      message = 'You ran out of time! You lose. You lost -50 ELO.';
+      finishGame('loss', 'You ran out of time! You lose. You lost -50 ELO.');
     } else {
-      result = 'win';
-      message = 'AI ran out of time! You win. You gained +50 ELO.';
-    }
-    setGameMessage(message);
-    if (onGameEnd) {
-      onGameEnd(result);
-      setGameEnded(true);
+      finishGame('win', 'AI ran out of time! You win. You gained +50 ELO.');
     }
   }
 
   // Resign functionality: when the user clicks resign, end the game as a loss.
   function handleResign() {
     if (gameEnded || game.isGameOver()) return;
-    setGameMessage("You resigned! You lost -50 ELO.");
-    if (onGameEnd) {
-      onGameEnd("loss");
-    }
-    setGameEnded(true);
+    finishGame('loss', "You resigned! You lost -50 ELO.");
   }
 
   function makeAIMove() {
@@ -419,12 +400,16 @@ export default function ChessBoard({
     return userMove(from, to);
   }
 
+  // Prevent moves if the game has ended.
   function onDrop(sourceSquare: string, targetSquare: string) {
+    if (gameEnded) return false;
     if (game.turn() !== userColor) return false;
     return tryMove(sourceSquare, targetSquare);
   }
 
+  // Prevent moves if the game has ended.
   function onSquareClick(square: string) {
+    if (gameEnded) return;
     if (!isAtLivePosition() || game.turn() !== userColor) return;
     if (selectedSquare && square !== selectedSquare && moveSquares[square]) {
       tryMove(selectedSquare, square);
