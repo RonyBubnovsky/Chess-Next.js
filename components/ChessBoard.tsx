@@ -48,9 +48,6 @@ export default function ChessBoard({
   // Reference for the chessboard container.
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  // For initial state reading we check freshStart.
-  const [isFresh, setIsFresh] = useState(freshStart);
-
   const getSavedState = () => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('chessGameState');
@@ -141,10 +138,6 @@ export default function ChessBoard({
   // Promotion state.
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
-  // After mounting, reset the fresh flag so subsequent state updates persist.
-  useEffect(() => {
-    setIsFresh(false);
-  }, []);
 
   // Sync chess.js instance with displayFen.
   useEffect(() => {
