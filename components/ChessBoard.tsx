@@ -56,6 +56,19 @@ export default function ChessBoard({
     return {};
   };
 
+  // Calculate initial time in seconds.
+  const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
+
+  // For timer dynamic update, adjust saved times using lastTimestamp.
+  const adjustTime = (savedTime: number) => {
+    const saved = getSavedState();
+    if (saved.lastTimestamp) {
+      const elapsed = Math.floor((Date.now() - saved.lastTimestamp) / 1000);
+      return Math.max(savedTime - elapsed, 0);
+    }
+    return savedTime;
+  };
+
   // Initialize state. If freshStart is true, we use default values.
   const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>(() => {
     if (freshStart) return [{ fen: game.fen(), lastMove: null, capturedPiece: null }];
@@ -122,16 +135,22 @@ export default function ChessBoard({
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
   // Clocks (Infinity if timeControl is 0).
-  const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
+  // Create a temporary game using the saved FEN (if any) so we get the correct turn.
+  const savedState = getSavedState();
+  const savedFen = savedState.displayFen || new Chess().fen();
+  const tmpGame = new Chess(savedFen);
+
   const [userTime, setUserTime] = useState<number>(() => {
     if (freshStart) return initialTime;
     const saved = getSavedState();
-    return saved.userTime ?? initialTime;
+    const savedTime = saved.userTime ?? initialTime;
+    return tmpGame.turn() === userColor ? adjustTime(savedTime) : savedTime;
   });
   const [aiTime, setAiTime] = useState<number>(() => {
     if (freshStart) return initialTime;
     const saved = getSavedState();
-    return saved.aiTime ?? initialTime;
+    const savedTime = saved.aiTime ?? initialTime;
+    return tmpGame.turn() === aiColor ? adjustTime(savedTime) : savedTime;
   });
   const timerActive = timeControl !== 0;
 
@@ -165,6 +184,7 @@ export default function ChessBoard({
           gameEnded,
           orientation,
           timeControl,
+          lastTimestamp: Date.now(), // timestamp for timer adjustment on refresh
         };
         sessionStorage.setItem('chessGameState', JSON.stringify(gameState));
       }

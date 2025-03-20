@@ -126,6 +126,7 @@ export default function ChessPage(): ReactElement {
     setTimeControl(null);
     setBoardKey(prev => prev + 1);
     setFreshStart(true);
+    sessionStorage.removeItem('chessGameState');
   }, []);
 
   const handleGameEnd = useCallback((result: "win" | "loss" | "draw") => {
