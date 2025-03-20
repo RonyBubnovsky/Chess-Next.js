@@ -60,16 +60,37 @@ const SecondaryButton: React.FC<ButtonProps> = ({ onClick, children, className =
   </motion.button>
 );
 
+// Helper to safely access sessionStorage.
+function getSavedGameState() {
+  if (typeof window !== 'undefined') {
+    const saved = sessionStorage.getItem('chessGameState');
+    return saved ? JSON.parse(saved) : null;
+  }
+  return null;
+}
+
 export default function ChessPage(): ReactElement {
-  const [orientation, setOrientation] = useState<'white' | 'black' | null>(null);
-  const [timeControl, setTimeControl] = useState<number | null>(null);
+  const savedState = getSavedGameState();
+  const [orientation, setOrientation] = useState<'white' | 'black' | null>(
+    savedState && savedState.orientation ? savedState.orientation : null
+  );
+  const [timeControl, setTimeControl] = useState<number | null>(
+    savedState && savedState.timeControl !== undefined ? savedState.timeControl : null
+  );
   const [boardKey, setBoardKey] = useState(0);
+  const [freshStart, setFreshStart] = useState<boolean>(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [hoveredTime, setHoveredTime] = useState<number | null>(null);
 
-  // Fetch statistics on component mount
+  // When in setup mode, clear any saved game.
+  useEffect(() => {
+    if (orientation === null && typeof window !== 'undefined') {
+      sessionStorage.clear();
+    }
+  }, [orientation]);
+
   useEffect(() => {
     fetchStats()
       .then((data) => {
@@ -82,7 +103,6 @@ export default function ChessPage(): ReactElement {
       });
   }, []);
 
-  // Game setup handlers
   const handleChooseColor = useCallback((color: 'white' | 'black') => {
     setOrientation(color);
   }, []);
@@ -95,12 +115,17 @@ export default function ChessPage(): ReactElement {
   const handleChooseTime = useCallback((minutes: number | 0) => {
     setTimeControl(minutes);
     setBoardKey(prev => prev + 1);
+    setFreshStart(true);
   }, []);
 
   const handleRestart = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.clear();
+    }
     setOrientation(null);
     setTimeControl(null);
     setBoardKey(prev => prev + 1);
+    setFreshStart(true);
   }, []);
 
   const handleGameEnd = useCallback((result: "win" | "loss" | "draw") => {
@@ -109,7 +134,6 @@ export default function ChessPage(): ReactElement {
       .catch(console.error);
   }, []);
 
-  // Dynamic gradient backgrounds
   const getGradient = () => {
     if (orientation === 'white') {
       return 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900';
@@ -122,7 +146,6 @@ export default function ChessPage(): ReactElement {
   return (
     <Protected>
       <div className={`min-h-screen ${getGradient()} text-white flex flex-col items-center justify-center p-6 transition-all duration-1000 ease-in-out relative overflow-hidden`}>
-        {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-0 left-0 w-full h-full opacity-10">
             {Array.from({ length: 10 }).map((_, i) => (
@@ -152,14 +175,12 @@ export default function ChessPage(): ReactElement {
           </div>
         </div>
 
-        {/* Main content container */}
         <motion.div
           className="container max-w-5xl mx-auto z-10 backdrop-blur-sm bg-black/20 p-8 rounded-2xl border border-white/10 shadow-2xl"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Header with logo/title */}
           <div className="flex justify-between items-center mb-8">
             <motion.div
               className="flex items-center gap-3"
@@ -197,7 +218,6 @@ export default function ChessPage(): ReactElement {
           </div>
 
           <AnimatePresence mode="wait">
-            {/* Game setup flow - Step 1: Choose Color */}
             {orientation === null && (
               <motion.div
                 key="choose-color"
@@ -207,12 +227,9 @@ export default function ChessPage(): ReactElement {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
               >
-                {/* Stats section */}
                 <div className="w-full mb-8">
                   <StatisticsSection stats={stats} loading={loadingStats} />
                 </div>
-
-                {/* Color selection */}
                 <motion.div 
                   className="text-center mb-8"
                   initial={{ opacity: 0, y: 10 }}
@@ -222,23 +239,16 @@ export default function ChessPage(): ReactElement {
                   <h2 className="text-3xl font-bold mb-2">Choose Your Side</h2>
                   <p className="text-white/60 mb-6">Select your preferred color or get a random assignment</p>
                 </motion.div>
-
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-2xl">
-                  {/* White option */}
                   <motion.div
-                    className={`relative overflow-hidden rounded-xl border-2 ${
-                      hoveredColor === 'white' ? 'border-indigo-400' : 'border-white/10'
-                    } transition-all cursor-pointer`}
+                    className={`relative overflow-hidden rounded-xl border-2 ${hoveredColor === 'white' ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
                     whileHover={{ scale: 1.03, y: -3 }}
                     whileTap={{ scale: 0.98 }}
                     onHoverStart={() => setHoveredColor('white')}
                     onHoverEnd={() => setHoveredColor(null)}
                     onClick={() => handleChooseColor('white')}
                   >
-                    {/* Lighter gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-br from-white to-gray-100 opacity-80" />
-
-                    {/* Content on top */}
                     <div className="p-6 flex flex-col items-center relative z-10">
                       <div className="h-16 w-16 rounded-full bg-white mb-3 flex items-center justify-center shadow-lg">
                         <div className="h-14 w-14 rounded-full bg-gradient-to-br from-white to-gray-100 flex items-center justify-center text-3xl text-black">
@@ -250,7 +260,6 @@ export default function ChessPage(): ReactElement {
                     </div>
                   </motion.div>
 
-                  {/* Black option */}
                   <motion.div
                     className={`relative overflow-hidden rounded-xl border-2 ${hoveredColor === 'black' ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
                     whileHover={{ scale: 1.03, y: -3 }}
@@ -271,7 +280,6 @@ export default function ChessPage(): ReactElement {
                     </div>
                   </motion.div>
 
-                  {/* Random option */}
                   <motion.div
                     className={`relative overflow-hidden rounded-xl border-2 ${hoveredColor === 'random' ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
                     whileHover={{ scale: 1.03, y: -3 }}
@@ -293,7 +301,6 @@ export default function ChessPage(): ReactElement {
               </motion.div>
             )}
 
-            {/* Game setup flow - Step 2: Choose Time */}
             {orientation !== null && timeControl === null && (
               <motion.div
                 key="choose-time"
@@ -332,7 +339,6 @@ export default function ChessPage(): ReactElement {
                 </motion.div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full max-w-3xl">
-                  {/* No Time Limit option */}
                   <motion.div
                     className={`relative overflow-hidden rounded-xl border-2 ${hoveredTime === 0 ? 'border-indigo-400' : 'border-white/10'} transition-all cursor-pointer`}
                     whileHover={{ scale: 1.03, y: -3 }}
@@ -351,7 +357,6 @@ export default function ChessPage(): ReactElement {
                     </div>
                   </motion.div>
                   
-                  {/* Time options */}
                   {[10, 5, 3].map((minutes) => (
                     <motion.div
                       key={minutes}
@@ -378,7 +383,6 @@ export default function ChessPage(): ReactElement {
               </motion.div>
             )}
 
-            {/* Game in progress */}
             {orientation !== null && timeControl !== null && (
               <motion.div
                 key="chessboard"
@@ -418,6 +422,7 @@ export default function ChessPage(): ReactElement {
                       orientation={orientation}
                       timeControl={timeControl}
                       onGameEnd={handleGameEnd}
+                      freshStart={freshStart}
                     />
                   </div>
                 </motion.div>
@@ -441,7 +446,6 @@ export default function ChessPage(): ReactElement {
           </AnimatePresence>
         </motion.div>
 
-        {/* Footer */}
         <motion.div
           className="mt-8 text-white/40 text-sm"
           initial={{ opacity: 0 }}

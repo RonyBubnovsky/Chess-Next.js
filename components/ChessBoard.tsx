@@ -20,6 +20,7 @@ interface ChessBoardProps {
   orientation: Orientation;
   timeControl: number; // in minutes
   onGameEnd?: (result: 'win' | 'loss' | 'draw') => void;
+  freshStart?: boolean; // if true, ignore saved sessionStorage state on initial load
 }
 
 interface MoveHistoryItem {
@@ -28,7 +29,6 @@ interface MoveHistoryItem {
   capturedPiece: CapturedPiece | null;
 }
 
-// Define a type for minimal move input.
 interface MoveInputType {
   from: Square;
   to: Square;
@@ -39,47 +39,171 @@ export default function ChessBoard({
   orientation,
   timeControl,
   onGameEnd,
+  freshStart = false,
 }: ChessBoardProps) {
-  // Create the chess instance once
+  // Create the chess instance once.
   const gameRef = useRef(new Chess());
   const game = gameRef.current;
   
-  // Reference to the chessboard container
+  // Reference for the chessboard container.
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
-  // State initialization
-  const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>([
-    { fen: game.fen(), lastMove: null, capturedPiece: null },
-  ]);
-  const [currentPosition, setCurrentPosition] = useState(0);
-  const [moveCount, setMoveCount] = useState(0);
-  const [displayFen, setDisplayFen] = useState(game.fen());
+  // For initial state reading we check freshStart.
+  const [isFresh, setIsFresh] = useState(freshStart);
+
+  const getSavedState = () => {
+    if (typeof window !== 'undefined') {
+      const saved = sessionStorage.getItem('chessGameState');
+      return saved ? JSON.parse(saved) : {};
+    }
+    return {};
+  };
+
+  // Initialize state. If freshStart is true, we use default values.
+  const [moveHistory, setMoveHistory] = useState<MoveHistoryItem[]>(() => {
+    if (freshStart) return [{ fen: game.fen(), lastMove: null, capturedPiece: null }];
+    const saved = getSavedState();
+    return saved.moveHistory || [{ fen: game.fen(), lastMove: null, capturedPiece: null }];
+  });
+  const [currentPosition, setCurrentPosition] = useState<number>(() => {
+    if (freshStart) return 0;
+    const saved = getSavedState();
+    return saved.currentPosition ?? 0;
+  });
+  const [moveCount, setMoveCount] = useState<number>(() => {
+    if (freshStart) return 0;
+    const saved = getSavedState();
+    return saved.moveCount ?? 0;
+  });
+  const [displayFen, setDisplayFen] = useState<string>(() => {
+    if (freshStart) return game.fen();
+    const saved = getSavedState();
+    return saved.displayFen || game.fen();
+  });
   const [highlightSquares, setHighlightSquares] = useState<{ [square: string]: React.CSSProperties }>({});
-  const [gameMessage, setGameMessage] = useState<string | null>(null);
+  const [gameMessage, setGameMessage] = useState<string | null>(() => {
+    if (freshStart) return null;
+    const saved = getSavedState();
+    return saved.gameMessage || null;
+  });
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [moveSquares, setMoveSquares] = useState<{ [square: string]: React.CSSProperties }>({});
-  const [gameEnded, setGameEnded] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameEnded, setGameEnded] = useState<boolean>(() => {
+    if (freshStart) return false;
+    const saved = getSavedState();
+    return saved.gameEnded || false;
+  });
+  const [gameStarted, setGameStarted] = useState<boolean>(() => {
+    if (freshStart) return false;
+    const saved = getSavedState();
+    return saved.gameStarted || false;
+  });
 
-  // Material tracking
-  const [capturedByUser, setCapturedByUser] = useState<CapturedPiece[]>([]);
-  const [capturedByAI, setCapturedByAI] = useState<CapturedPiece[]>([]);
-  const [promotionBonusUser, setPromotionBonusUser] = useState(0);
-  const [promotionBonusAI, setPromotionBonusAI] = useState(0);
+  // Material tracking.
+  const [capturedByUser, setCapturedByUser] = useState<CapturedPiece[]>(() => {
+    if (freshStart) return [];
+    const saved = getSavedState();
+    return saved.capturedByUser || [];
+  });
+  const [capturedByAI, setCapturedByAI] = useState<CapturedPiece[]>(() => {
+    if (freshStart) return [];
+    const saved = getSavedState();
+    return saved.capturedByAI || [];
+  });
+  const [promotionBonusUser, setPromotionBonusUser] = useState<number>(() => {
+    if (freshStart) return 0;
+    const saved = getSavedState();
+    return saved.promotionBonusUser || 0;
+  });
+  const [promotionBonusAI, setPromotionBonusAI] = useState<number>(() => {
+    if (freshStart) return 0;
+    const saved = getSavedState();
+    return saved.promotionBonusAI || 0;
+  });
 
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
-  // Clocks - Set to Infinity when timeControl is 0 (no time limit)
+  // Clocks (Infinity if timeControl is 0).
   const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
-  const [userTime, setUserTime] = useState(initialTime);
-  const [aiTime, setAiTime] = useState(initialTime);
+  const [userTime, setUserTime] = useState<number>(() => {
+    if (freshStart) return initialTime;
+    const saved = getSavedState();
+    return saved.userTime ?? initialTime;
+  });
+  const [aiTime, setAiTime] = useState<number>(() => {
+    if (freshStart) return initialTime;
+    const saved = getSavedState();
+    return saved.aiTime ?? initialTime;
+  });
   const timerActive = timeControl !== 0;
 
-  // Promotion
+  // Promotion state.
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square; color: 'w' | 'b'; } | null>(null);
 
-  // Helpers
+  // After mounting, reset the fresh flag so subsequent state updates persist.
+  useEffect(() => {
+    setIsFresh(false);
+  }, []);
+
+  // Sync chess.js instance with displayFen.
+  useEffect(() => {
+    game.load(displayFen);
+  }, [displayFen, game]);
+
+  // Persist state to sessionStorage.
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const gameState = {
+        moveHistory,
+        currentPosition,
+        moveCount,
+        displayFen,
+        gameMessage,
+        capturedByUser,
+        capturedByAI,
+        promotionBonusUser,
+        promotionBonusAI,
+        userTime,
+        aiTime,
+        gameStarted,
+        gameEnded,
+        orientation,
+        timeControl,
+      };
+      sessionStorage.setItem('chessGameState', JSON.stringify(gameState));
+    }
+  }, [
+    moveHistory,
+    currentPosition,
+    moveCount,
+    displayFen,
+    gameMessage,
+    capturedByUser,
+    capturedByAI,
+    promotionBonusUser,
+    promotionBonusAI,
+    userTime,
+    aiTime,
+    gameStarted,
+    gameEnded,
+    orientation,
+    timeControl,
+  ]);
+
+  // Generic effect to trigger AI move if it's AI's turn.
+  useEffect(() => {
+    if (isAtLivePosition() && game.turn() !== userColor && !game.isGameOver()) {
+      const timer = setTimeout(() => {
+        makeAIMove();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [displayFen, userColor]);
+
+  // Helper: check if we are at live position.
+  const isAtLivePosition = () => currentPosition === moveHistory.length - 1;
+
   const highlightLastMove = useCallback((from: string, to: string) => {
     setHighlightSquares({
       [from]: { backgroundColor: 'rgba(255, 255, 0, 0.4)' },
@@ -132,11 +256,8 @@ export default function ChessBoard({
     [handleGoBack, handleGoForward]
   );
 
-  const isAtLivePosition = currentPosition === moveHistory.length - 1;
-  
   function updateCapturedPieces(capturedPiece: CapturedPiece | null, byPlayer: boolean) {
     if (!capturedPiece) return;
-    
     if (byPlayer) {
       setCapturedByUser(prev => [...prev, capturedPiece]);
     } else {
@@ -146,37 +267,29 @@ export default function ChessBoard({
 
   function recordMove(move: Move) {
     const newFen = game.fen();
-    
-    // Check if a piece was captured
     let capturedPiece: CapturedPiece | null = null;
     if (move.captured) {
       capturedPiece = {
         type: move.captured as PieceType,
         color: move.color === 'w' ? 'b' : 'w'
       };
-      
-      // Update captured pieces based on who made the move
       const byPlayer = move.color === userColor;
       updateCapturedPieces(capturedPiece, byPlayer);
     }
-    
     const newHistoryItem: MoveHistoryItem = {
       fen: newFen,
       lastMove: { from: move.from, to: move.to },
-      capturedPiece
+      capturedPiece,
     };
-
     setMoveHistory((prevHistory) => {
-      const newHistory = isAtLivePosition
+      const newHistory = isAtLivePosition()
         ? [...prevHistory, newHistoryItem]
         : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
-
       setCurrentPosition(newHistory.length - 1);
       setDisplayFen(newFen);
       highlightLastMove(move.from, move.to);
       return newHistory;
     });
-
     setMoveCount((prevCount) => prevCount + 1);
   }
 
@@ -219,13 +332,10 @@ export default function ChessBoard({
     }
   }
   
-
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
-    
     let result: 'win' | 'loss' | 'draw';
     let message: string;
-    
     if (timeoutColor === userColor) {
       result = 'loss';
       message = 'You ran out of time! You lose. You lost -50 ELO.';
@@ -233,32 +343,24 @@ export default function ChessBoard({
       result = 'win';
       message = 'AI ran out of time! You win. You gained +50 ELO.';
     }
-    
     setGameMessage(message);
-    
     if (onGameEnd) {
       onGameEnd(result);
       setGameEnded(true);
     }
   }
 
-  // Use a Web Worker to compute the AI move in a separate thread
   function makeAIMove() {
     if (game.turn() !== aiColor || game.isGameOver()) return;
-    
     const aiWorker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url));
-    
-    // Post the current game state to the worker
     aiWorker.postMessage({
       fen: game.fen(),
       aiColor,
       maxDepth: 3,
     });
-    
     aiWorker.onmessage = (event) => {
       const bestMove = event.data as Move | null;
       if (bestMove) {
-        // Build a minimal move input using our defined type.
         const moveInput: MoveInputType = { from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion };
         const moveMade = game.move(moveInput);
         if (moveMade) {
@@ -268,7 +370,6 @@ export default function ChessBoard({
       }
       aiWorker.terminate();
     };
-
     aiWorker.onerror = (error) => {
       console.error('AI Worker error:', error);
       aiWorker.terminate();
@@ -276,7 +377,7 @@ export default function ChessBoard({
   }
 
   function userMove(from: string, to: string, promotion?: string): boolean {
-    if (!isAtLivePosition) {
+    if (!isAtLivePosition()) {
       const liveFen = moveHistory[moveHistory.length - 1].fen;
       game.load(liveFen);
       setDisplayFen(liveFen);
@@ -284,31 +385,23 @@ export default function ChessBoard({
     }
     const move = game.move({ from: from as Square, to: to as Square, promotion }) as Move | null;
     if (!move) return false;
-
     recordMove(move);
-
     if (move && move.promotion) {
       const bonus = move.promotion === 'q' ? 9 : move.promotion === 'r' ? 5 : 3;
       if (move.color === userColor) {
         setPromotionBonusUser(prev => prev + bonus);
-        // When you (user) promote, it’s like giving your pawn to the AI.
         setCapturedByAI(prev => [...prev, { type: 'p', color: userColor }]);
       } else {
         setPromotionBonusAI(prev => prev + bonus);
-        // If the AI promotes, add a pawn to your captured pieces.
         setCapturedByUser(prev => [...prev, { type: 'p', color: aiColor }]);
       }
     }
-    
-    
     checkGameStatus();
     setSelectedSquare(null);
     setMoveSquares({});
-
     setTimeout(() => {
       makeAIMove();
     }, 1500);
-
     return true;
   }
 
@@ -330,7 +423,7 @@ export default function ChessBoard({
   }
 
   function onSquareClick(square: string) {
-    if (!isAtLivePosition || game.turn() !== userColor) return;
+    if (!isAtLivePosition() || game.turn() !== userColor) return;
     if (selectedSquare && square !== selectedSquare && moveSquares[square]) {
       tryMove(selectedSquare, square);
       return;
@@ -373,21 +466,16 @@ export default function ChessBoard({
   }, [handleKeyDown]);
 
   useEffect(() => {
-    if (!gameStarted && orientation === 'black') {
+    if (!gameStarted && !freshStart && game.turn() !== userColor) {
       setGameStarted(true);
-      setTimeout(() => {
-        makeAIMove();
-      }, 1500);
     }
-  }, [orientation, gameStarted]);
+  }, [gameStarted, freshStart, userColor, displayFen]);
 
   useEffect(() => {
-    // Only run the clock if time control is enabled
     if (!timerActive) return;
-    
     const clockInterval = setInterval(() => {
       if (gameEnded || game.isGameOver()) return;
-      if (currentPosition === moveHistory.length - 1) {
+      if (isAtLivePosition()) {
         const turn = game.turn();
         if (turn === userColor) {
           setUserTime((prev) => {
@@ -408,11 +496,9 @@ export default function ChessBoard({
         }
       }
     }, 1000);
-
     return () => clearInterval(clockInterval);
-  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, game, timerActive]);
+  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, timerActive]);
 
-  // Format the clock display - handle infinite time
   const userClock = timeControl === 0 ? '∞' : formatTime(userTime);
   const aiClock = timeControl === 0 ? '∞' : formatTime(aiTime);
   const moveDisplay = moveCount === 0 ? 'Game Start' : `Move ${moveCount}`;
