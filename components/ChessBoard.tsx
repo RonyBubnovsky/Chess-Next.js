@@ -48,6 +48,9 @@ export default function ChessBoard({
   // Reference for the chessboard container.
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
+  // A ref to track the current AI request id.
+  const aiRequestId = useRef(0);
+
   const getSavedState = () => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('chessGameState');
@@ -359,13 +362,29 @@ export default function ChessBoard({
 
   function makeAIMove() {
     if (game.turn() !== aiColor || game.isGameOver()) return;
+    // Increment the AI request ID so previous pending moves become outdated.
+    aiRequestId.current++;
+    const currentRequestId = aiRequestId.current;
+    const currentFEN = game.fen();
+
     const aiWorker = new Worker(new URL('../workers/aiWorker.ts', import.meta.url));
     aiWorker.postMessage({
-      fen: game.fen(),
+      fen: currentFEN,
       aiColor,
       maxDepth: 3,
     });
     aiWorker.onmessage = (event) => {
+      // Only accept the result if the board state hasn’t changed since this request was issued.
+      if (aiRequestId.current !== currentRequestId) {
+        console.log("Discarding outdated AI move (request ID mismatch)");
+        aiWorker.terminate();
+        return;
+      }
+      if (game.fen() !== currentFEN) {
+        console.log("Board state changed. Discarding AI move.");
+        aiWorker.terminate();
+        return;
+      }
       const bestMove = event.data as Move | null;
       if (bestMove) {
         const moveInput: MoveInputType = { from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion };
