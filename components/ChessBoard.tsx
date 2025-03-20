@@ -134,6 +134,19 @@ export default function ChessBoard({
     return saved.promotionBonusAI || 0;
   });
 
+  const [shouldPersist, setShouldPersist] = useState(!freshStart); 
+
+  
+  useEffect(() => {
+    if (freshStart) {
+      // Wait 500ms before enabling persistence so that the fresh state is fully in place.
+      const timeout = setTimeout(() => {
+        setShouldPersist(true);
+      }, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [freshStart]);
+
   const userColor = orientation === 'white' ? 'w' : 'b';
   const aiColor = userColor === 'w' ? 'b' : 'w';
 
@@ -194,6 +207,7 @@ export default function ChessBoard({
 
   // Persist state to sessionStorage.
   useEffect(() => {
+    if (!shouldPersist) return; // Do not persist until the fresh start delay has passed.
     if (typeof window !== 'undefined') {
       if (gameEnded) {
         sessionStorage.removeItem('chessGameState');
@@ -235,7 +249,9 @@ export default function ChessBoard({
     gameEnded,
     orientation,
     timeControl,
+    shouldPersist,
   ]);
+  
 
   // Generic effect to trigger AI move if it's AI's turn.
   useEffect(() => {
