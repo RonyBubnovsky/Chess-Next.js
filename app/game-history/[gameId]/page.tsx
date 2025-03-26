@@ -40,13 +40,11 @@ export default function GameReplayPage() {
   useEffect(() => {
     async function fetchGame() {
       try {
-        const res = await fetch('/api/history');
+        // Fetch the specific game record from the dedicated endpoint.
+        const res = await fetch(`/api/history/${encodeURIComponent(gameId)}`);
         if (res.ok) {
-          const records: GameRecord[] = await res.json();
-          const record = records.find(r => r.date === gameId);
-          if (record) {
-            setGameRecord(record);
-          }
+          const record: GameRecord = await res.json();
+          setGameRecord(record);
         }
       } catch (error) {
         console.error('Error fetching game record:', error);
