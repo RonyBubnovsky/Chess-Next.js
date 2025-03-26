@@ -3,12 +3,23 @@
 import React, { useState, useEffect, useCallback, ReactElement, ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Trophy, Clock, RotateCcw, Home, Award, Zap, InfinityIcon, History } from 'lucide-react';
+import {
+  ChevronLeft,
+  Trophy,
+  Clock,
+  RotateCcw,
+  Home,
+  Award,
+  Zap,
+  InfinityIcon,
+  History,
+} from 'lucide-react';
 import Protected from '../../components/Protected';
 import ChessBoard from '../../components/ChessBoard';
 import StatisticsSection, { Stats } from '../../components/StatisticsSection';
 import GameHistory from '../../components/GameHistory';
 
+// Define our types.
 interface CapturedPiece {
   type: 'p' | 'n' | 'b' | 'r' | 'q';
   color: 'w' | 'b';
@@ -26,6 +37,7 @@ interface GameRecordType {
   moveHistory: MoveHistoryItem[];
 }
 
+// Define our async functions at the top so they’re in scope.
 async function fetchStats(): Promise<Stats> {
   const res = await fetch('/api/stats');
   if (!res.ok) {
@@ -45,33 +57,49 @@ async function updateStats(result: "win" | "loss" | "draw"): Promise<Stats> {
   return res.json();
 }
 
+// ButtonProps include a disabled prop.
 interface ButtonProps {
   onClick: () => void;
   children: ReactNode;
   className?: string;
   icon?: ReactNode;
+  disabled?: boolean;
 }
 
-const PrimaryButton: React.FC<ButtonProps> = ({ onClick, children, className = '', icon = null }) => (
+const PrimaryButton: React.FC<ButtonProps> = ({
+  onClick,
+  children,
+  className = '',
+  icon = null,
+}) => (
   <motion.button
     onClick={onClick}
     className={`px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 ${className}`}
     whileHover={{ scale: 1.05, y: -3 }}
     whileTap={{ scale: 0.98 }}
-    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
   >
     {icon}
     {children}
   </motion.button>
 );
 
-const SecondaryButton: React.FC<ButtonProps> = ({ onClick, children, className = '', icon = null }) => (
+const SecondaryButton: React.FC<ButtonProps> = ({
+  onClick,
+  children,
+  className = '',
+  icon = null,
+  disabled = false,
+}) => (
   <motion.button
     onClick={onClick}
-    className={`px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 ${className}`}
-    whileHover={{ scale: 1.05, y: -3, backgroundColor: 'rgba(255, 255, 255, 0.15)' }}
-    whileTap={{ scale: 0.98 }}
-    transition={{ type: "spring", stiffness: 400, damping: 17 }}
+    disabled={disabled}
+    className={`px-6 py-3 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 ${className} ${
+      disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+    }`}
+    whileHover={!disabled ? { scale: 1.05, y: -3, backgroundColor: 'rgba(255, 255, 255, 0.15)' } : {}}
+    whileTap={!disabled ? { scale: 0.98 } : {}}
+    transition={{ type: 'spring', stiffness: 400, damping: 17 }}
   >
     {icon}
     {children}
@@ -101,10 +129,12 @@ export default function ChessPage(): ReactElement {
   const [loadingStats, setLoadingStats] = useState(true);
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [hoveredTime, setHoveredTime] = useState<number | null>(null);
-
   const [showHistory, setShowHistory] = useState(false);
 
-  // When in setup mode, clear any saved game.
+  // Disable navigation when a game is in progress.
+  const disableNav = orientation !== null && timeControl !== null;
+
+  // Clear sessionStorage when in setup mode.
   useEffect(() => {
     if (orientation === null && typeof window !== 'undefined') {
       sessionStorage.clear();
@@ -135,7 +165,7 @@ export default function ChessPage(): ReactElement {
   const handleChooseTime = useCallback((minutes: number | 0) => {
     sessionStorage.removeItem('chessGameState');
     setTimeControl(minutes);
-    setBoardKey(prev => prev + 1);
+    setBoardKey((prev) => prev + 1);
     setFreshStart(true);
   }, []);
 
@@ -145,7 +175,7 @@ export default function ChessPage(): ReactElement {
     }
     setOrientation(null);
     setTimeControl(null);
-    setBoardKey(prev => prev + 1);
+    setBoardKey((prev) => prev + 1);
     setFreshStart(true);
   }, []);
 
@@ -164,14 +194,17 @@ export default function ChessPage(): ReactElement {
       console.error('Failed to save game record:', error);
     }
   }
-  
-  const handleGameEnd = useCallback((result: "win" | "loss" | "draw", gameRecord: GameRecordType) => {
-    updateStats(result)
-      .then((updatedStats) => setStats(updatedStats))
-      .catch(console.error);
-    saveGameRecord(gameRecord);
-  }, []);
-  
+
+  const handleGameEnd = useCallback(
+    (result: "win" | "loss" | "draw", gameRecord: GameRecordType) => {
+      updateStats(result)
+        .then((updatedStats) => setStats(updatedStats))
+        .catch(console.error);
+      saveGameRecord(gameRecord);
+    },
+    []
+  );
+
   const getGradient = () => {
     if (orientation === 'white') {
       return 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900';
@@ -206,7 +239,7 @@ export default function ChessPage(): ReactElement {
                 transition={{
                   duration: Math.random() * 20 + 15,
                   repeat: Infinity,
-                  ease: "easeInOut",
+                  ease: 'easeInOut',
                 }}
               />
             ))}
@@ -236,29 +269,60 @@ export default function ChessPage(): ReactElement {
               </h1>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               className="flex gap-3"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
             >
-              <Link href="/">
-                <SecondaryButton icon={<Home size={18} />} className="!px-3 !py-2" onClick={() => {}}>
-                  Home
-                </SecondaryButton>
-              </Link>
-              <Link href="/leaderboard">
-                <SecondaryButton icon={<Award size={18} />} className="!px-3 !py-2" onClick={() => {}}>
-                  Leaderboard
-                </SecondaryButton>
-              </Link>
-              <SecondaryButton
-              icon={<History size={18} />}
-              className="!px-3 !py-2"
-              onClick={() => setShowHistory(true)}
-            >
-              Game History
-            </SecondaryButton>
+              {disableNav ? (
+                <>
+                  <SecondaryButton
+                    disabled
+                    icon={<Home size={18} />}
+                    className="!px-3 !py-2"
+                    onClick={() => {}}
+                  >
+                    Home
+                  </SecondaryButton>
+                  <SecondaryButton
+                    disabled
+                    icon={<Award size={18} />}
+                    className="!px-3 !py-2"
+                    onClick={() => {}}
+                  >
+                    Leaderboard
+                  </SecondaryButton>
+                  <SecondaryButton
+                    disabled
+                    icon={<History size={18} />}
+                    className="!px-3 !py-2"
+                    onClick={() => {}}
+                  >
+                    Game History
+                  </SecondaryButton>
+                </>
+              ) : (
+                <>
+                  <Link href="/">
+                    <SecondaryButton icon={<Home size={18} />} className="!px-3 !py-2" onClick={() => {}}>
+                      Home
+                    </SecondaryButton>
+                  </Link>
+                  <Link href="/leaderboard">
+                    <SecondaryButton icon={<Award size={18} />} className="!px-3 !py-2" onClick={() => {}}>
+                      Leaderboard
+                    </SecondaryButton>
+                  </Link>
+                  <SecondaryButton
+                    icon={<History size={18} />}
+                    className="!px-3 !py-2"
+                    onClick={() => setShowHistory(true)}
+                  >
+                    Game History
+                  </SecondaryButton>
+                </>
+              )}
             </motion.div>
           </div>
 
@@ -275,7 +339,7 @@ export default function ChessPage(): ReactElement {
                 <div className="w-full mb-8">
                   <StatisticsSection stats={stats} loading={loadingStats} />
                 </div>
-                <motion.div 
+                <motion.div
                   className="text-center mb-8"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}

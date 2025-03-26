@@ -91,9 +91,9 @@ export default function GameReplayPage() {
     const winningSide = losingSide === 'w' ? 'Black' : 'White';
     resultMessage = `${winningSide} wins by checkmate.`;
   } else if (gameRecord.result === 'win') {
-    resultMessage = `You won by resignation/time.`;
+    resultMessage = `You won.`;
   } else if (gameRecord.result === 'loss') {
-    resultMessage = `You lost by resignation/time.`;
+    resultMessage = `You lost.`;
   } else if (gameRecord.result === 'draw') {
     resultMessage = `The game is a draw.`;
   } else {

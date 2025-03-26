@@ -393,7 +393,7 @@ export default function ChessBoard({
       finishGame('draw', "Draw by threefold repetition!");
     } else if (game.isInsufficientMaterial()) {
       finishGame('draw', "Draw due to insufficient material!");
-    } else if (game.isDraw()) {
+    } else if (game.isDrawByFiftyMoves()) {
       finishGame('draw', "Draw by the 50-move rule!");
     }
   }
