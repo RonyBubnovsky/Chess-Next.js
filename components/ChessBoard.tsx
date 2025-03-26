@@ -19,7 +19,11 @@ interface CapturedPiece {
 interface ChessBoardProps {
   orientation: Orientation;
   timeControl: number; // in minutes
-  onGameEnd?: (result: 'win' | 'loss' | 'draw') => void;
+  onGameEnd?: (result: 'win' | 'loss' | 'draw', gameRecord: {
+    result: 'win' | 'loss' | 'draw';
+    date: string;
+    moveHistory: MoveHistoryItem[];
+  }) => void;
   freshStart?: boolean; // if true, ignore saved sessionStorage state on initial load
 }
 
@@ -363,7 +367,13 @@ export default function ChessBoard({
     }
     setGameMessage(message);
     if (onGameEnd) {
-      onGameEnd(result);
+      const gameRecord = {
+        result,
+        date: new Date().toISOString(),
+        moveHistory,
+        orientation: userColor,
+      };
+      onGameEnd(result, gameRecord);
     }
     setGameEnded(true);
   }

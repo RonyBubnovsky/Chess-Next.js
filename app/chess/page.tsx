@@ -3,10 +3,28 @@
 import React, { useState, useEffect, useCallback, ReactElement, ReactNode } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Trophy, Clock, RotateCcw, Home, Award, Zap, InfinityIcon } from 'lucide-react';
+import { ChevronLeft, Trophy, Clock, RotateCcw, Home, Award, Zap, InfinityIcon, History } from 'lucide-react';
 import Protected from '../../components/Protected';
 import ChessBoard from '../../components/ChessBoard';
 import StatisticsSection, { Stats } from '../../components/StatisticsSection';
+import GameHistory from '../../components/GameHistory';
+
+interface CapturedPiece {
+  type: 'p' | 'n' | 'b' | 'r' | 'q';
+  color: 'w' | 'b';
+}
+
+interface MoveHistoryItem {
+  fen: string;
+  lastMove: { from: string; to: string } | null;
+  capturedPiece: CapturedPiece | null;
+}
+
+interface GameRecordType {
+  result: 'win' | 'loss' | 'draw';
+  date: string;
+  moveHistory: MoveHistoryItem[];
+}
 
 async function fetchStats(): Promise<Stats> {
   const res = await fetch('/api/stats');
@@ -84,6 +102,8 @@ export default function ChessPage(): ReactElement {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [hoveredTime, setHoveredTime] = useState<number | null>(null);
 
+  const [showHistory, setShowHistory] = useState(false);
+
   // When in setup mode, clear any saved game.
   useEffect(() => {
     if (orientation === null && typeof window !== 'undefined') {
@@ -129,12 +149,29 @@ export default function ChessPage(): ReactElement {
     setFreshStart(true);
   }, []);
 
-  const handleGameEnd = useCallback((result: "win" | "loss" | "draw") => {
+  async function saveGameRecord(gameRecord: {
+    result: 'win' | 'loss' | 'draw';
+    date: string;
+    moveHistory: MoveHistoryItem[];
+  }) {
+    try {
+      await fetch('/api/history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(gameRecord),
+      });
+    } catch (error) {
+      console.error('Failed to save game record:', error);
+    }
+  }
+  
+  const handleGameEnd = useCallback((result: "win" | "loss" | "draw", gameRecord: GameRecordType) => {
     updateStats(result)
       .then((updatedStats) => setStats(updatedStats))
       .catch(console.error);
+    saveGameRecord(gameRecord);
   }, []);
-
+  
   const getGradient = () => {
     if (orientation === 'white') {
       return 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900';
@@ -215,6 +252,13 @@ export default function ChessPage(): ReactElement {
                   Leaderboard
                 </SecondaryButton>
               </Link>
+              <SecondaryButton
+              icon={<History size={18} />}
+              className="!px-3 !py-2"
+              onClick={() => setShowHistory(true)}
+            >
+              Game History
+            </SecondaryButton>
             </motion.div>
           </div>
 
@@ -446,6 +490,8 @@ export default function ChessPage(): ReactElement {
             )}
           </AnimatePresence>
         </motion.div>
+
+        {showHistory && <GameHistory onClose={() => setShowHistory(false)} />}
 
         <motion.div
           className="mt-8 text-white/40 text-sm"
