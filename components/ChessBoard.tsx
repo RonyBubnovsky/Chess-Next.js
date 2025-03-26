@@ -381,12 +381,15 @@ export default function ChessBoard({
   function checkGameStatus() {
     if (game.isCheckmate()) {
       const result = game.turn() === userColor ? 'loss' : 'win';
+      // Delay finishGame to ensure moveHistory state is updated
+      setTimeout(() => {
       finishGame(
         result,
         result === 'win'
           ? 'Checkmate! You win. You gained +50 ELO.'
           : 'Checkmate! You lose. You lost -50 ELO.'
       );
+      }, 0.5);
     } else if (game.isStalemate()) {
       finishGame('draw', "Stalemate! No legal moves and you're not in check.");
     } else if (game.isThreefoldRepetition()) {

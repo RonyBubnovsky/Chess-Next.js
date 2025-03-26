@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import Link from 'next/link';
@@ -66,23 +66,31 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
           ) : games.length === 0 ? (
             <p>No games recorded yet.</p>
           ) : (
-            <ul>
-              {games.map((game, index) => (
-                <li
-                  key={index}
-                  className="border-b border-gray-700 py-2 hover:bg-gray-700 transition-colors rounded-lg"
-                >
-                  <Link href={`/game-history/${encodeURIComponent(game.date)}`} onClick={onClose}>
-                    <div className="flex justify-between items-center cursor-pointer p-2">
-                      <span className="capitalize font-medium">{game.result}</span>
-                      <span className="text-sm text-gray-400">
-                        {new Date(game.date).toLocaleString()}
-                      </span>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            // Wrap the list in a container with fixed max height and vertical scrolling
+            <div className="max-h-80 overflow-y-auto">
+              <ul>
+                {games.map((game, index) => (
+                  <li
+                    key={index}
+                    className="border-b border-gray-700 py-2 hover:bg-gray-700 transition-colors rounded-lg"
+                  >
+                    <Link
+                      href={`/game-history/${encodeURIComponent(game.date)}`}
+                      onClick={onClose}
+                    >
+                      <div className="flex justify-between items-center cursor-pointer p-2">
+                        <span className="capitalize font-medium">
+                          {game.result}
+                        </span>
+                        <span className="text-sm text-gray-400">
+                          {new Date(game.date).toLocaleString()}
+                        </span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </motion.div>
       </motion.div>
