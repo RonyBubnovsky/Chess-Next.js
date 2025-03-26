@@ -339,25 +339,31 @@ export default function ChessBoard({
         type: move.captured as PieceType,
         color: move.color === 'w' ? 'b' : 'w'
       };
-      const byPlayer = move.color === userColor;
-      updateCapturedPieces(capturedPiece, byPlayer);
+      updateCapturedPieces(capturedPiece, move.color === userColor);
     }
+  
     const newHistoryItem: MoveHistoryItem = {
       fen: newFen,
       lastMove: { from: move.from, to: move.to },
       capturedPiece,
     };
-    setMoveHistory((prevHistory) => {
+  
+    setMoveHistory(prev => {
       const newHistory = isAtLivePosition()
-        ? [...prevHistory, newHistoryItem]
-        : [...prevHistory.slice(0, currentPosition + 1), newHistoryItem];
+        ? [...prev, newHistoryItem]
+        : [...prev.slice(0, currentPosition + 1), newHistoryItem];
       setCurrentPosition(newHistory.length - 1);
-      setDisplayFen(newFen);
+      setDisplayFen(newHistoryItem.fen);
       highlightLastMove(move.from, move.to);
       return newHistory;
     });
-    setMoveCount((prevCount) => prevCount + 1);
+  
+    setMoveCount(prev => prev + 1);
+  
+    // Delay checkGameStatus until after React flushes the updated moveHistory
+    setTimeout(checkGameStatus, 1);
   }
+  
 
   // Helper function to finish the game by removing the saved state.
   function finishGame(result: 'win' | 'loss' | 'draw', message: string) {
@@ -379,28 +385,54 @@ export default function ChessBoard({
   }
 
   function checkGameStatus() {
-    if (game.isCheckmate()) {
-      const result = game.turn() === userColor ? 'loss' : 'win';
-      // Delay finishGame to ensure moveHistory state is updated
-      setTimeout(() => {
-      finishGame(
-        result,
-        result === 'win'
-          ? 'Checkmate! You win. You gained +50 ELO.'
-          : 'Checkmate! You lose. You lost -50 ELO.'
-      );
-      }, 0.5);
-    } else if (game.isStalemate()) {
-      finishGame('draw', "Stalemate! No legal moves and you're not in check.");
-    } else if (game.isThreefoldRepetition()) {
-      finishGame('draw', "Draw by threefold repetition!");
-    } else if (game.isInsufficientMaterial()) {
-      finishGame('draw', "Draw due to insufficient material!");
-    } else if (game.isDrawByFiftyMoves()) {
-      finishGame('draw', "Draw by the 50-move rule!");
-    }
-  }
+    const historyVerbose = game.history({ verbose: true });
+    if (historyVerbose.length === 0) return; // nothing to record
   
+    const lastMove = historyVerbose[historyVerbose.length - 1];
+    const capturedPiece: CapturedPiece | null = lastMove.captured
+      ? { type: lastMove.captured as PieceType, color: (lastMove.color === 'w' ? 'b' : 'w') as PieceColor }
+      : null;
+  
+    const finalItem: MoveHistoryItem = {
+      fen: game.fen(),
+      lastMove: { from: lastMove.from, to: lastMove.to },
+      capturedPiece,
+    };
+  
+    setMoveHistory(prev => {
+      const newHistory = isAtLivePosition()
+        ? [...prev, finalItem]
+        : [...prev.slice(0, currentPosition + 1), finalItem];
+      setCurrentPosition(newHistory.length - 1);
+      setDisplayFen(finalItem.fen);
+      highlightLastMove(lastMove.from, lastMove.to);
+      return newHistory;
+    });
+  
+    let result: 'win' | 'loss' | 'draw';
+    let message: string;
+  
+    if (game.isCheckmate()) {
+      result = game.turn() === userColor ? 'loss' : 'win';
+      message = result === 'win'
+        ? 'Checkmate! You win. You gained +50 ELO.'
+        : 'Checkmate! You lose. You lost -50 ELO.';
+    } else if (game.isStalemate()) {
+      result = 'draw'; message = "Stalemate! No legal moves and you're not in check.";
+    } else if (game.isThreefoldRepetition()) {
+      result = 'draw'; message = "Draw by threefold repetition!";
+    } else if (game.isInsufficientMaterial()) {
+      result = 'draw'; message = "Draw due to insufficient material!";
+    } else if (game.isDrawByFiftyMoves()) {
+      result = 'draw'; message = "Draw by the 50‑move rule!";
+    } else {
+      return;
+    }
+  
+    finishGame(result, message);
+  }    
+  
+
   function endGameByTime(timeoutColor: 'w' | 'b') {
     if (gameEnded) return;
     if (timeoutColor === userColor) {
@@ -427,7 +459,7 @@ export default function ChessBoard({
     aiWorker.postMessage({
       fen: currentFEN,
       aiColor,
-      maxDepth: 3,
+      maxDepth: 1,
     });
     aiWorker.onmessage = (event) => {
       // Only accept the result if the board state hasn’t changed since this request was issued.

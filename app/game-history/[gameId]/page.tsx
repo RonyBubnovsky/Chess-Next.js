@@ -45,6 +45,8 @@ export default function GameReplayPage() {
         if (res.ok) {
           const record: GameRecord = await res.json();
           setGameRecord(record);
+          // Log all FENs in the move history
+          console.log('Full Move History FENs:', record.moveHistory.map(move => move.fen));
         }
       } catch (error) {
         console.error('Error fetching game record:', error);
@@ -59,12 +61,11 @@ export default function GameReplayPage() {
       setShowResultPopup(false);
       setCurrentPosition(prev => Math.max(prev - 1, 0));
     } else if (e.key === 'ArrowRight') {
-      if (currentPosition === gameRecord.moveHistory.length - 1) {
-        if (!showResultPopup) {
-          setShowResultPopup(true);
-        }
-      } else {
-        setCurrentPosition(prev => Math.min(prev + 1, gameRecord.moveHistory.length - 1));
+      // Allow moving to the last move before showing result
+      if (currentPosition < gameRecord.moveHistory.length - 1) {
+        setCurrentPosition(prev => prev + 1);
+      } else if (!showResultPopup) {
+        setShowResultPopup(true);
       }
     }
   };
@@ -82,7 +83,7 @@ export default function GameReplayPage() {
     );
   }
 
-  const finalFen = gameRecord.moveHistory[gameRecord.moveHistory.length - 1].fen;
+  const finalFen = gameRecord.moveHistory[gameRecord.moveHistory.length-1].fen;
   const chessInstance = new Chess(finalFen);
   let resultMessage = '';
 
