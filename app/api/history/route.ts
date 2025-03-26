@@ -35,6 +35,10 @@ export async function POST(request: Request) {
     pipeline.lTrim(key, 0, 49); // Keep only the 50 most recent records
     await pipeline.exec();
 
+    // Invalidate any cached version so next GET returns fresh data.
+    const cacheKey = `user:${userId}:games:cache`;
+    await redis.del(cacheKey);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving game record:', error);
@@ -42,20 +46,27 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
+  void _request;
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
   try {
+    const cacheKey = `user:${userId}:games:cache`;
+    // Check if cached value exists.
+    const cachedGames = await redis.get(cacheKey);
+    if (cachedGames) {
+      return NextResponse.json(JSON.parse(cachedGames));
+    }
+
     const key = `user:${userId}:games`;
-    // support pagination via query parameters "offset" and "limit"
-    const { searchParams } = new URL(request.url);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
-    // Redis lRange stop index is inclusive, so calculate accordingly.
-    const records = await redis.lRange(key, offset, offset + limit - 1);
+    const records = await redis.lRange(key, 0, -1);
     const games: GameRecord[] = records.map(record => JSON.parse(record));
+
+    // Cache the result for 15 seconds.
+    await redis.set(cacheKey, JSON.stringify(games), { EX: 15 });
+
     return NextResponse.json(games);
   } catch (error) {
     console.error('Error fetching game history:', error);
