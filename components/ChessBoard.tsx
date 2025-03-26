@@ -459,7 +459,7 @@ export default function ChessBoard({
     aiWorker.postMessage({
       fen: currentFEN,
       aiColor,
-      maxDepth: 1,
+      maxDepth: 3,
     });
     aiWorker.onmessage = (event) => {
       // Only accept the result if the board state hasn’t changed since this request was issued.
@@ -473,17 +473,21 @@ export default function ChessBoard({
         aiWorker.terminate();
         return;
       }
-      const bestMove = event.data as Move | null;
-      if (bestMove) {
-        const moveInput: MoveInputType = { from: bestMove.from, to: bestMove.to, promotion: bestMove.promotion };
-        const moveMade = game.move(moveInput);
+    
+      const { success, move } = event.data as { success: boolean; move: MoveInputType | null; error?: string };
+    
+      if (success && move) {
+        const moveMade = game.move({ from: move.from, to: move.to, promotion: move.promotion });
         if (moveMade) {
           recordMove(moveMade);
           checkGameStatus();
         }
+      } else if (!success) {
+        console.error("AI Worker returned error:", event.data.error);
       }
+    
       aiWorker.terminate();
-    };
+    };    
     aiWorker.onerror = (error) => {
       console.error('AI Worker error:', error);
       aiWorker.terminate();
@@ -513,9 +517,6 @@ export default function ChessBoard({
     checkGameStatus();
     setSelectedSquare(null);
     setMoveSquares({});
-    setTimeout(() => {
-      makeAIMove();
-    }, 1500);
     return true;
   }
 
