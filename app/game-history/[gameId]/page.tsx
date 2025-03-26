@@ -10,17 +10,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const dynamic = 'force-dynamic';
 
+// Define a type for a captured piece.
+type CapturedPiece = {
+  type: 'p' | 'n' | 'b' | 'r' | 'q';
+  color: 'w' | 'b';
+};
+
 interface MoveHistoryItem {
   fen: string;
   lastMove: { from: string; to: string } | null;
-  capturedPiece: any;
+  capturedPiece: CapturedPiece | null;
 }
 
 interface GameRecord {
   result: 'win' | 'loss' | 'draw';
   date: string;
   moveHistory: MoveHistoryItem[];
-  orientation: 'white' | 'black'; // New field indicating your side
+  orientation: 'white' | 'black'; // Indicates your side
 }
 
 export default function GameReplayPage() {
@@ -87,9 +93,9 @@ export default function GameReplayPage() {
     const winningSide = losingSide === 'w' ? 'Black' : 'White';
     resultMessage = `${winningSide} wins by checkmate.`;
   } else if (gameRecord.result === 'win') {
-    resultMessage = `You won by resignation.`;
+    resultMessage = `You won by resignation/time.`;
   } else if (gameRecord.result === 'loss') {
-    resultMessage = `You lost by resignation.`;
+    resultMessage = `You lost by resignation/time.`;
   } else if (gameRecord.result === 'draw') {
     resultMessage = `The game is a draw.`;
   } else {
@@ -97,7 +103,6 @@ export default function GameReplayPage() {
   }
 
   const currentFen = gameRecord.moveHistory[currentPosition]?.fen || new Chess().fen();
-  // Use the orientation from the saved game record to flip the board if necessary.
   const boardOrientation = gameRecord.orientation;
 
   return (
@@ -120,7 +125,7 @@ export default function GameReplayPage() {
       <ReplayChessBoard 
         position={currentFen} 
         boardWidth={400} 
-        boardOrientation={boardOrientation}  // Pass the orientation here
+        boardOrientation={boardOrientation}
       />
       <p className="mt-4">Use left/right arrow keys to navigate moves.</p>
 
