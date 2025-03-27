@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import redisClient from '../../../lib/redis'; 
@@ -18,14 +17,17 @@ export async function DELETE() {
     await clerk.users.deleteUser(userId);
   
     // Delete the user's leaderboard stats from Redis.
-    // The key format is "user:${userId}:stats"
     await redisClient.del(`user:${userId}:stats`);
+    
+    // Delete the user's games and game cache from Redis.
+    await redisClient.del(`user:${userId}:games`);
+    await redisClient.del(`user:${userId}:games:cache`);
   
-    // Return a success message after deleting account and leaderboard entry.
-    return NextResponse.json({ message: 'Account and leaderboard entry deleted successfully' });
+    // Return a success message after deleting account, leaderboard entry, and games.
+    return NextResponse.json({ message: 'Account, leaderboard entry, and games deleted successfully' });
   } catch (error: unknown) {
     if (error instanceof Error) {
-      console.error('Error deleting account or leaderboard entry:', error);
+      console.error('Error deleting account or related data:', error);
       return NextResponse.json(
         { error: error.message || 'Failed to delete account' },
         { status: 500 }
