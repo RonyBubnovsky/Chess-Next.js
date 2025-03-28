@@ -71,18 +71,24 @@ const PrimaryButton: React.FC<ButtonProps> = ({
   children,
   className = '',
   icon = null,
+  disabled = false,
 }) => (
   <motion.button
-    onClick={onClick}
-    className={`px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 ${className}`}
-    whileHover={{ scale: 1.05, y: -3 }}
-    whileTap={{ scale: 0.98 }}
+    onClick={disabled ? undefined : onClick}
+    disabled={disabled}
+    className={`px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl shadow-lg flex items-center justify-center gap-2 ${className} ${
+      disabled ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+    }`}
+    // Only animate when not disabled:
+    whileHover={!disabled ? { scale: 1.05, y: -3 } : {}}
+    whileTap={!disabled ? { scale: 0.98 } : {}}
     transition={{ type: 'spring', stiffness: 400, damping: 17 }}
   >
     {icon}
     {children}
   </motion.button>
 );
+
 
 const SecondaryButton: React.FC<ButtonProps> = ({
   onClick,
@@ -130,6 +136,7 @@ export default function ChessPage(): ReactElement {
   const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [hoveredTime, setHoveredTime] = useState<number | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [gameFinished, setGameFinished] = useState(false);
 
   // Disable navigation when a game is in progress.
   const disableNav = orientation !== null && timeControl !== null;
@@ -177,6 +184,7 @@ export default function ChessPage(): ReactElement {
     setTimeControl(null);
     setBoardKey((prev) => prev + 1);
     setFreshStart(true);
+    setGameFinished(false);
   }, []);
 
   async function saveGameRecord(gameRecord: {
@@ -201,6 +209,7 @@ export default function ChessPage(): ReactElement {
         .then((updatedStats) => setStats(updatedStats))
         .catch(console.error);
       saveGameRecord(gameRecord);
+      setGameFinished(true);
     },
     []
   );
@@ -544,6 +553,7 @@ export default function ChessPage(): ReactElement {
                 >
                   <PrimaryButton
                     onClick={handleRestart}
+                    disabled={!gameFinished} // Button is disabled when the game is live
                     className="bg-gradient-to-r from-rose-500 to-orange-500"
                     icon={<RotateCcw size={18} />}
                   >
