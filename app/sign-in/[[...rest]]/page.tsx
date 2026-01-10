@@ -173,18 +173,33 @@ export default function SignInPage() {
               text-overflow: initial !important;
             }
             
-            /* Make social buttons container wider */
+            /* Make social buttons take full width */
             .cl-socialButtonsIconButton,
             .cl-socialButtonsBlockButton {
-              min-width: 120px !important;
-              padding-left: 6px !important;
-              padding-right: 6px !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              min-width: auto !important;
+              padding-left: 12px !important;
+              padding-right: 12px !important;
+              margin: 0 !important;
             }
             
-            /* Make the social buttons row have proper spacing */
-            .cl-socialButtonsGroup {
-              justify-content: space-between !important;
-              gap: 8px !important;
+            /* Force social buttons to stack vertically */
+            .cl-socialButtons,
+            .cl-socialButtonsGroup,
+            .cl-socialButtonsBlockButtonRow,
+            .cl-internal-* > div:has(.cl-socialButtonsBlockButton) {
+              display: flex !important;
+              flex-direction: column !important;
+              gap: 12px !important;
+              width: 100% !important;
+            }
+            
+            /* Override any row layout */
+            .cl-socialButtons > *,
+            .cl-socialButtonsGroup > * {
+              flex-direction: column !important;
+              width: 100% !important;
             }
 
             /* Make borders more visible for social buttons */
@@ -270,9 +285,15 @@ export default function SignInPage() {
             /* Specific layout adjustments for social buttons group */
             .cl-socialButtonsGroup {
               display: flex !important;
-              flex-direction: row !important; 
-              justify-content: space-between !important;
+              flex-direction: column !important;
+              gap: 12px !important;
               width: 100% !important;
+            }
+            
+            /* Ensure each social button takes full width */
+            .cl-socialButtonsBlockButton {
+              width: 100% !important;
+              flex: 1 1 100% !important;
             }
             
             /* Enhanced primary button styling */
@@ -444,9 +465,9 @@ export default function SignInPage() {
                 `,
                 socialButtonsGroup: `
                   flex
-                  flex-row
-                  justify-between
-                  gap-2
+                  flex-col
+                  gap-3
+                  w-full
                 `,
               },
               layout: {
