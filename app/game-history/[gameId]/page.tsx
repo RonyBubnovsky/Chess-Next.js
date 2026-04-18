@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from 'chess.js';
 import ReplayChessBoard from '../../../components/ReplayChessBoard';
@@ -42,7 +42,7 @@ export default function GameReplayPage() {
   const step = 2;
   const maxIndex = gameRecord ? gameRecord.moveHistory.length - 1 : 0;
 
-  const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!gameRecord) return;
     if (e.key === 'ArrowLeft') {
       setShowResultPopup(false);
@@ -54,7 +54,7 @@ export default function GameReplayPage() {
         setShowResultPopup(true);
       }
     }
-  });
+  }, [currentPosition, gameRecord, maxIndex, showResultPopup]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => handleKeyDown(event);

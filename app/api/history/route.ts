@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import redis from '../../../lib/redis';
+import { getRedisClient } from '../../../lib/redis';
 
 interface MoveHistoryItem {
   fen: string;
@@ -25,6 +25,11 @@ export async function POST(request: Request) {
   }
 
   try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return NextResponse.json({ error: 'Redis unavailable' }, { status: 503 });
+    }
+
     // Parse the game record from the request body
     const body = (await request.json()) as GameRecord;
     const key = `user:${userId}:games`;
@@ -53,6 +58,12 @@ export async function GET(_request: Request) {
     return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
   }
   try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      // Return an empty history list so the history page still loads.
+      return NextResponse.json([]);
+    }
+
     const cacheKey = `user:${userId}:games:cache`;
     // Check if cached value exists.
     const cachedGames = await redis.get(cacheKey);

@@ -1,18 +1,27 @@
 
 import { NextResponse } from 'next/server';
 import { currentUser } from '@clerk/nextjs/server';
-import redis from '../../../lib/redis';
+import { getRedisClient } from '../../../lib/redis';
+
+const defaultStats = { played: 0, wins: 0, losses: 0, draws: 0, elo: 500 };
 
 export async function GET() {
   const user = await currentUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const redis = await getRedisClient();
+  if (!redis) {
+    // Return safe defaults so the page can still render without Redis.
+    return NextResponse.json(defaultStats);
+  }
+
   const key = `user:${user.id}:stats`;
   const statsStr = await redis.get(key);
   let stats;
   if (!statsStr) {
-    stats = { played: 0, wins: 0, losses: 0, draws: 0, elo: 500 };
+    stats = defaultStats;
     await redis.set(key, JSON.stringify(stats));
   } else {
     stats = JSON.parse(statsStr);
@@ -25,12 +34,18 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const redis = await getRedisClient();
+  if (!redis) {
+    return NextResponse.json({ error: 'Redis unavailable' }, { status: 503 });
+  }
+
   const key = `user:${user.id}:stats`;
   const { result } = await request.json();
   const statsStr = await redis.get(key);
   let stats;
   if (!statsStr) {
-    stats = { played: 0, wins: 0, losses: 0, draws: 0, elo: 500 };
+    stats = { ...defaultStats };
   } else {
     stats = JSON.parse(statsStr);
   }

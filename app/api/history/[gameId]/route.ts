@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import redis from '../../../../lib/redis';
+import { getRedisClient } from '../../../../lib/redis';
 
 interface MoveHistoryItem {
   fen: string;
@@ -31,6 +31,11 @@ export async function GET(
   }
 
   try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return NextResponse.json({ error: 'Redis unavailable' }, { status: 503 });
+    }
+
     const key = `user:${userId}:games`;
     const records = await redis.lRange(key, 0, -1);
     const gameRecord: GameRecord | undefined = records

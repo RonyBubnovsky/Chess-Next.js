@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useEffectEvent, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Chess, Square, Move } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import PromotionOverlay from './PromotionOverlay';
@@ -438,7 +438,7 @@ export default function ChessBoard({
     finishGame('loss', "You resigned! You lost -50 ELO.");
   }
 
-  const handleAIMove = useEffectEvent(() => {
+  const handleAIMove = useCallback(() => {
     if (game.turn() !== aiColor || game.isGameOver()) return;
     // Increment the AI request ID so previous pending moves become outdated.
     aiRequestId.current++;
@@ -482,7 +482,7 @@ export default function ChessBoard({
       console.error('AI Worker error:', error);
       aiWorker.terminate();
     };
-  });
+  }, [aiColor, checkGameStatus, game, recordMove]);
 
   // This effect only schedules the AI move. The event reads the latest board state.
   useEffect(() => {
@@ -590,7 +590,7 @@ export default function ChessBoard({
     }
   }, [displayFen, freshStart, game, gameStarted, userColor]);
 
-  const handleClockTick = useEffectEvent(() => {
+  const handleClockTick = useCallback(() => {
     if (gameEnded || game.isGameOver()) return;
     if (!isAtLivePosition()) return;
 
@@ -613,7 +613,7 @@ export default function ChessBoard({
       }
       return prev - 1;
     });
-  });
+  }, [aiColor, endGameByTime, game, gameEnded, isAtLivePosition, userColor]);
 
   useEffect(() => {
     if (!timerActive) return;

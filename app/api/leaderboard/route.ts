@@ -1,7 +1,7 @@
 
 import { NextResponse } from 'next/server';
 import { clerkClient, auth } from '@clerk/nextjs/server';
-import redis from '../../../lib/redis';
+import { getRedisClient } from '../../../lib/redis';
 
 export async function GET() {
   // Get the current user id from Clerk auth.
@@ -11,6 +11,11 @@ export async function GET() {
     if (!userId) {
       return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
     }
+  const redis = await getRedisClient();
+  if (!redis) {
+    // Return an empty leaderboard so the page can still render during outages.
+    return NextResponse.json([]);
+  }
   // 1. Check if we have a cached leaderboard
   const cachedLeaderboard = await redis.get('leaderboard:top10');
   if (cachedLeaderboard) {

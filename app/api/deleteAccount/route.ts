@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import redisClient from '../../../lib/redis'; 
+import { getRedisClient } from '../../../lib/redis'; 
 
 export async function DELETE() {
   // Get the current user id from Clerk auth.
@@ -15,13 +15,15 @@ export async function DELETE() {
     // Delete the user account from Clerk.
     const clerk = await clerkClient();
     await clerk.users.deleteUser(userId);
+
+    const redisClient = await getRedisClient();
   
-    // Delete the user's leaderboard stats from Redis.
-    await redisClient.del(`user:${userId}:stats`);
-    
-    // Delete the user's games and game cache from Redis.
-    await redisClient.del(`user:${userId}:games`);
-    await redisClient.del(`user:${userId}:games:cache`);
+    if (redisClient) {
+      // Redis cleanup is best-effort so account deletion still works during outages.
+      await redisClient.del(`user:${userId}:stats`);
+      await redisClient.del(`user:${userId}:games`);
+      await redisClient.del(`user:${userId}:games:cache`);
+    }
   
     // Return a success message after deleting account, leaderboard entry, and games.
     return NextResponse.json({ message: 'Account, leaderboard entry, and games deleted successfully' });
