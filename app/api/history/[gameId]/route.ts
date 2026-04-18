@@ -50,3 +50,52 @@ export async function GET(
     return NextResponse.json({ error: 'Failed to fetch game record' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
+  void request;
+  const { gameId } = await params;
+  const gameIdDecoded = decodeURIComponent(gameId);
+
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return NextResponse.json({ error: 'Redis unavailable' }, { status: 503 });
+    }
+
+    const key = `user:${userId}:games`;
+    const cacheKey = `user:${userId}:games:cache`;
+    const records = await redis.lRange(key, 0, -1);
+    const games = records.map(record => JSON.parse(record) as GameRecord);
+    const filteredGames = games.filter(game => game.date !== gameIdDecoded);
+
+    if (filteredGames.length === games.length) {
+      return NextResponse.json({ error: 'Game record not found' }, { status: 404 });
+    }
+
+    const pipeline = redis.multi();
+    pipeline.del(key);
+
+    if (filteredGames.length > 0) {
+      pipeline.rPush(
+        key,
+        filteredGames.map(game => JSON.stringify(game))
+      );
+    }
+
+    pipeline.del(cacheKey);
+    await pipeline.exec();
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting game record:', error);
+    return NextResponse.json({ error: 'Failed to delete game record' }, { status: 500 });
+  }
+}

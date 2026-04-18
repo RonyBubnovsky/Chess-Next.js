@@ -19,6 +19,14 @@ interface GameRecord {
   orientation: 'white' | 'black';
 }
 
+async function deleteMatchingKeys(redis: Awaited<ReturnType<typeof getRedisClient>>, pattern: string) {
+  if (!redis) return;
+
+  for await (const key of redis.scanIterator({ MATCH: pattern })) {
+    await redis.del(key as string);
+  }
+}
+
 function createGameFingerprint(game: GameRecord): string {
   // Ignore date so duplicate end callbacks for same game collapse together.
   return createHash('sha256')
@@ -104,5 +112,30 @@ export async function GET(_request: Request) {
   } catch (error) {
     console.error('Error fetching game history:', error);
     return NextResponse.json({ error: 'Failed to fetch game history' }, { status: 500 });
+  }
+}
+
+export async function DELETE() {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 401 });
+  }
+
+  try {
+    const redis = await getRedisClient();
+    if (!redis) {
+      return NextResponse.json({ error: 'Redis unavailable' }, { status: 503 });
+    }
+
+    const key = `user:${userId}:games`;
+    const cacheKey = `user:${userId}:games:cache`;
+
+    await redis.del([key, cacheKey]);
+    await deleteMatchingKeys(redis, `user:${userId}:games:dedupe:*`);
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting game history:', error);
+    return NextResponse.json({ error: 'Failed to delete game history' }, { status: 500 });
   }
 }
