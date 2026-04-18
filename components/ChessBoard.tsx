@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useEffectEvent, useCallback, useRef } from 'react';
 import { Chess, Square, Move } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
 import PromotionOverlay from './PromotionOverlay';
@@ -257,16 +257,6 @@ export default function ChessBoard({
   ]);
   
 
-  // Generic effect to trigger AI move if it's AI's turn.
-  useEffect(() => {
-    if (isAtLivePosition() && game.turn() !== userColor && !game.isGameOver()) {
-      const timer = setTimeout(() => {
-        makeAIMove();
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [displayFen, userColor]);
-
   // Helper: check if we are at live position.
   const isAtLivePosition = () => currentPosition === moveHistory.length - 1;
 
@@ -448,7 +438,7 @@ export default function ChessBoard({
     finishGame('loss', "You resigned! You lost -50 ELO.");
   }
 
-  function makeAIMove() {
+  const handleAIMove = useEffectEvent(() => {
     if (game.turn() !== aiColor || game.isGameOver()) return;
     // Increment the AI request ID so previous pending moves become outdated.
     aiRequestId.current++;
@@ -492,7 +482,17 @@ export default function ChessBoard({
       console.error('AI Worker error:', error);
       aiWorker.terminate();
     };
-  }
+  });
+
+  // This effect only schedules the AI move. The event reads the latest board state.
+  useEffect(() => {
+    if (currentPosition === moveHistory.length - 1 && game.turn() !== userColor && !game.isGameOver()) {
+      const timer = setTimeout(() => {
+        handleAIMove();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPosition, displayFen, game, handleAIMove, moveHistory.length, userColor]);
 
   function userMove(from: string, to: string, promotion?: string): boolean {
     if (!isAtLivePosition()) {
@@ -588,35 +588,40 @@ export default function ChessBoard({
     if (!gameStarted && !freshStart && game.turn() !== userColor) {
       setGameStarted(true);
     }
-  }, [gameStarted, freshStart, userColor, displayFen]);
+  }, [displayFen, freshStart, game, gameStarted, userColor]);
+
+  const handleClockTick = useEffectEvent(() => {
+    if (gameEnded || game.isGameOver()) return;
+    if (!isAtLivePosition()) return;
+
+    const turn = game.turn();
+    if (turn === userColor) {
+      setUserTime((prev) => {
+        if (prev <= 1) {
+          endGameByTime(userColor);
+          return 0;
+        }
+        return prev - 1;
+      });
+      return;
+    }
+
+    setAiTime((prev) => {
+      if (prev <= 1) {
+        endGameByTime(aiColor);
+        return 0;
+      }
+      return prev - 1;
+    });
+  });
 
   useEffect(() => {
     if (!timerActive) return;
     const clockInterval = setInterval(() => {
-      if (gameEnded || game.isGameOver()) return;
-      if (isAtLivePosition()) {
-        const turn = game.turn();
-        if (turn === userColor) {
-          setUserTime((prev) => {
-            if (prev <= 1) {
-              endGameByTime(userColor);
-              return 0;
-            }
-            return prev - 1;
-          });
-        } else {
-          setAiTime((prev) => {
-            if (prev <= 1) {
-              endGameByTime(aiColor);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }
-      }
+      handleClockTick();
     }, 1000);
     return () => clearInterval(clockInterval);
-  }, [userColor, aiColor, gameEnded, currentPosition, moveHistory.length, timerActive]);
+  }, [handleClockTick, timerActive]);
 
   const userClock = timeControl === 0 ? '∞' : formatTime(userTime);
   const aiClock = timeControl === 0 ? '∞' : formatTime(aiTime);

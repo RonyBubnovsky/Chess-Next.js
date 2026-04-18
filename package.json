@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.24.1",
@@ -37,7 +37,6 @@
   },
   "overrides": {
     "flatted": "^3.4.2",
-    "minimatch": "^9.0.7",
     "picomatch": "^4.0.4"
   }
 }

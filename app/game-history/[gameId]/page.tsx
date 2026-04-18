@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import Link from 'next/link';
 import { Chess } from 'chess.js';
 import ReplayChessBoard from '../../../components/ReplayChessBoard';
@@ -42,7 +42,7 @@ export default function GameReplayPage() {
   const step = 2;
   const maxIndex = gameRecord ? gameRecord.moveHistory.length - 1 : 0;
 
-  const handleKeyDown = (e: KeyboardEvent) => {
+  const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
     if (!gameRecord) return;
     if (e.key === 'ArrowLeft') {
       setShowResultPopup(false);
@@ -54,12 +54,13 @@ export default function GameReplayPage() {
         setShowResultPopup(true);
       }
     }
-  };
+  });
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [gameRecord, currentPosition, showResultPopup]);
+    const onKeyDown = (event: KeyboardEvent) => handleKeyDown(event);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [handleKeyDown]);
 
   if (!gameRecord) {
     return <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">Loading game record...</div>;
