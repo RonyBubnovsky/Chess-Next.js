@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, X } from 'lucide-react';
 import Link from 'next/link';
+import ConfirmModal from './ConfirmModal';
 
 interface GameRecord {
   result: 'win' | 'loss' | 'draw';
@@ -14,11 +15,24 @@ interface GameHistoryProps {
   onClose: () => void;
 }
 
+interface ConfirmState {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  action: (() => Promise<void>) | null;
+}
+
 const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
   const [games, setGames] = useState<GameRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingDate, setDeletingDate] = useState<string | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    title: '',
+    description: '',
+    confirmLabel: 'Delete',
+    action: null,
+  });
 
   const fetchHistory = useCallback(async () => {
     try {
@@ -40,9 +54,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
     fetchHistory();
   }, [fetchHistory]);
 
-  async function handleDeleteGame(date: string) {
-    if (!window.confirm('Delete this game from history?')) return;
-
+  async function deleteGame(date: string) {
     setDeletingDate(date);
     try {
       const res = await fetch(`/api/history/${encodeURIComponent(date)}`, {
@@ -60,9 +72,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
     }
   }
 
-  async function handleDeleteAllGames() {
-    if (!window.confirm('Delete all game history? This cannot be undone.')) return;
-
+  async function deleteAllGames() {
     setDeletingAll(true);
     try {
       const res = await fetch('/api/history', {
@@ -78,6 +88,43 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
     } finally {
       setDeletingAll(false);
     }
+  }
+
+  function closeConfirmModal() {
+    setConfirmState({
+      title: '',
+      description: '',
+      confirmLabel: 'Delete',
+      action: null,
+    });
+  }
+
+  function openDeleteGameConfirm(date: string) {
+    setConfirmState({
+      title: 'Delete Game',
+      description: 'Remove this game from your history. This action cannot be undone.',
+      confirmLabel: 'Delete Game',
+      action: async () => {
+        await deleteGame(date);
+      },
+    });
+  }
+
+  function openDeleteAllConfirm() {
+    setConfirmState({
+      title: 'Delete All History',
+      description: 'Remove every saved game from your history. This action cannot be undone.',
+      confirmLabel: 'Delete All',
+      action: async () => {
+        await deleteAllGames();
+      },
+    });
+  }
+
+  async function handleConfirmAction() {
+    if (!confirmState.action) return;
+    await confirmState.action();
+    closeConfirmModal();
   }
 
   return (
@@ -113,7 +160,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
               <div className="mb-4 flex justify-end">
                 <button
                   className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={handleDeleteAllGames}
+                  onClick={openDeleteAllConfirm}
                   disabled={deletingAll || deletingDate !== null}
                 >
                   <Trash2 size={16} />
@@ -144,7 +191,7 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
 
                       <button
                         className="rounded-md p-2 text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                        onClick={() => handleDeleteGame(game.date)}
+                        onClick={() => openDeleteGameConfirm(game.date)}
                         disabled={deletingAll || deletingDate === game.date}
                         aria-label="Delete game"
                       >
@@ -159,6 +206,16 @@ const GameHistory: React.FC<GameHistoryProps> = ({ onClose }) => {
           )}
         </motion.div>
       </motion.div>
+
+      <ConfirmModal
+        isOpen={confirmState.action !== null}
+        title={confirmState.title}
+        description={confirmState.description}
+        confirmLabel={confirmState.confirmLabel}
+        confirmDisabled={deletingAll || deletingDate !== null}
+        onConfirm={handleConfirmAction}
+        onCancel={closeConfirmModal}
+      />
     </AnimatePresence>
   );
 };
