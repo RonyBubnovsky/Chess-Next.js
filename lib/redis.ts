@@ -16,6 +16,7 @@ function createRedisConnection() {
     socket: {
       host: process.env.REDIS_HOST,
       port: Number(process.env.REDIS_PORT),
+      connectTimeout: 5000,
     },
   });
 
