@@ -1,8 +1,15 @@
 {
-    "git": {
-      "deploymentEnabled": {
-        "main": false
-      }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "main": false
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/redis-keepalive",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
   
