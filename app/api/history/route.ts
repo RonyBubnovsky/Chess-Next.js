@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
+import { createHash } from 'crypto';
 import { getRedisClient } from '../../../lib/redis';
 
 interface MoveHistoryItem {
@@ -18,6 +19,19 @@ interface GameRecord {
   orientation: 'white' | 'black';
 }
 
+function createGameFingerprint(game: GameRecord): string {
+  // Ignore date so duplicate end callbacks for same game collapse together.
+  return createHash('sha256')
+    .update(
+      JSON.stringify({
+        result: game.result,
+        orientation: game.orientation,
+        moveHistory: game.moveHistory,
+      })
+    )
+    .digest('hex');
+}
+
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) {
@@ -33,6 +47,14 @@ export async function POST(request: Request) {
     // Parse the game record from the request body
     const body = (await request.json()) as GameRecord;
     const key = `user:${userId}:games`;
+    const fingerprint = createGameFingerprint(body);
+    const dedupeKey = `user:${userId}:games:dedupe:${fingerprint}`;
+
+    // Block duplicate saves for same finished game during a short window.
+    const shouldSave = await redis.set(dedupeKey, '1', { NX: true, EX: 120 });
+    if (!shouldSave) {
+      return NextResponse.json({ success: true, deduped: true });
+    }
 
     // Use a Redis multi/exec transaction to push and trim in one go
     const pipeline = redis.multi();

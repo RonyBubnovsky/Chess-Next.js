@@ -45,16 +45,6 @@ export default function ChessBoard({
   onGameEnd,
   freshStart = false,
 }: ChessBoardProps) {
-  // Create the chess instance once.
-  const gameRef = useRef(new Chess());
-  const game = gameRef.current;
-  
-  // Reference for the chessboard container.
-  const boardContainerRef = useRef<HTMLDivElement>(null);
-
-  // A ref to track the current AI request id.
-  const aiRequestId = useRef(0);
-
   const getSavedState = () => {
     if (typeof window !== 'undefined') {
       const saved = sessionStorage.getItem('chessGameState');
@@ -62,6 +52,36 @@ export default function ChessBoard({
     }
     return {};
   };
+
+  const gameRef = useRef<Chess | null>(null);
+  if (gameRef.current === null) {
+    const restoredGame = new Chess();
+    const saved = freshStart ? {} : getSavedState();
+
+    // Restore full PGN first so repetition and other history-based rules still work.
+    if (saved.pgn) {
+      try {
+        restoredGame.loadPgn(saved.pgn);
+      } catch {
+        if (saved.displayFen) {
+          restoredGame.load(saved.displayFen);
+        }
+      }
+    } else if (saved.displayFen) {
+      restoredGame.load(saved.displayFen);
+    }
+
+    gameRef.current = restoredGame;
+  }
+  const game = gameRef.current;
+  
+  // Reference for the chessboard container.
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+
+  // A ref to track the current AI request id.
+  const aiRequestId = useRef(0);
+  const aiMoveHandlerRef = useRef<() => void>(() => {});
+  const gameEndHandledRef = useRef(false);
 
   // Calculate initial time in seconds.
   const initialTime = timeControl === 0 ? Infinity : minutesToSeconds(timeControl);
@@ -180,21 +200,19 @@ export default function ChessBoard({
   // New state for the square where the king is in check.
   const [checkSquare, setCheckSquare] = useState<string | null>(null);
 
-  // Sync chess.js instance with displayFen.
-  useEffect(() => {
-    game.load(displayFen);
-  }, [displayFen, game]);
-
   // Update checkSquare whenever the board changes.
   useEffect(() => {
-    if (game.inCheck()) {
+    // Use displayed position here because user can browse history without changing live game state.
+    const boardGame = new Chess(displayFen);
+
+    if (boardGame.inCheck()) {
       // Find the king's square for the player whose turn it is.
-      const board = game.board();
+      const board = boardGame.board();
       let kingSquare: string | null = null;
       for (let rank = 0; rank < 8; rank++) {
         for (let file = 0; file < 8; file++) {
           const piece = board[rank][file];
-          if (piece && piece.type === 'k' && piece.color === game.turn()) {
+          if (piece && piece.type === 'k' && piece.color === boardGame.turn()) {
             const fileLetter = String.fromCharCode('a'.charCodeAt(0) + file);
             const rankNumber = 8 - rank;
             kingSquare = fileLetter + rankNumber;
@@ -207,7 +225,7 @@ export default function ChessBoard({
     } else {
       setCheckSquare(null);
     }
-  }, [displayFen, game]);
+  }, [displayFen]);
 
   // Persist state to sessionStorage.
   useEffect(() => {
@@ -231,6 +249,7 @@ export default function ChessBoard({
           gameStarted,
           gameEnded,
           orientation,
+          pgn: game.pgn(),
           timeControl,
           lastTimestamp: Date.now(), // timestamp for timer adjustment on refresh
         };
@@ -249,6 +268,7 @@ export default function ChessBoard({
     promotionBonusAI,
     userTime,
     aiTime,
+    game,
     gameStarted,
     gameEnded,
     orientation,
@@ -349,14 +369,15 @@ export default function ChessBoard({
     });
   
     setMoveCount(prev => prev + 1);
-  
-    // Delay checkGameStatus until after React flushes the updated moveHistory
-    setTimeout(checkGameStatus, 1);
   }
   
 
   // Helper function to finish the game by removing the saved state.
   function finishGame(result: 'win' | 'loss' | 'draw', message: string) {
+    // Guard against duplicate end handling when multiple status checks race.
+    if (gameEndHandledRef.current) return;
+    gameEndHandledRef.current = true;
+
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('chessGameState');
       console.log('Session storage cleared:', sessionStorage.getItem('chessGameState'));
@@ -375,30 +396,6 @@ export default function ChessBoard({
   }
 
   function checkGameStatus() {
-    const historyVerbose = game.history({ verbose: true });
-    if (historyVerbose.length === 0) return; // nothing to record
-  
-    const lastMove = historyVerbose[historyVerbose.length - 1];
-    const capturedPiece: CapturedPiece | null = lastMove.captured
-      ? { type: lastMove.captured as PieceType, color: (lastMove.color === 'w' ? 'b' : 'w') as PieceColor }
-      : null;
-  
-    const finalItem: MoveHistoryItem = {
-      fen: game.fen(),
-      lastMove: { from: lastMove.from, to: lastMove.to },
-      capturedPiece,
-    };
-  
-    setMoveHistory(prev => {
-      const newHistory = isAtLivePosition()
-        ? [...prev, finalItem]
-        : [...prev.slice(0, currentPosition + 1), finalItem];
-      setCurrentPosition(newHistory.length - 1);
-      setDisplayFen(finalItem.fen);
-      highlightLastMove(lastMove.from, lastMove.to);
-      return newHistory;
-    });
-  
     let result: 'win' | 'loss' | 'draw';
     let message: string;
   
@@ -484,15 +481,20 @@ export default function ChessBoard({
     };
   }, [aiColor, checkGameStatus, game, recordMove]);
 
+  useEffect(() => {
+    // Keep latest AI move logic without forcing timer effect to restart on clock ticks.
+    aiMoveHandlerRef.current = handleAIMove;
+  }, [handleAIMove]);
+
   // This effect only schedules the AI move. The event reads the latest board state.
   useEffect(() => {
     if (currentPosition === moveHistory.length - 1 && game.turn() !== userColor && !game.isGameOver()) {
       const timer = setTimeout(() => {
-        handleAIMove();
+        aiMoveHandlerRef.current();
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [currentPosition, displayFen, game, handleAIMove, moveHistory.length, userColor]);
+  }, [currentPosition, displayFen, game, moveHistory.length, userColor]);
 
   function userMove(from: string, to: string, promotion?: string): boolean {
     if (!isAtLivePosition()) {
